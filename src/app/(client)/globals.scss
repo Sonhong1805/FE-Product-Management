@@ -1,0 +1,21 @@
+* {
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  /* font-size: 62.5%; */
+  scroll-behavior: smooth;
+}
+
+/* import bootstrap to set changes */
+@import "~bootstrap/scss/bootstrap";
+
+/* make the customizations */
+/* $theme-colors: (
+  "primary": tomato,
+); */
+
+.btn {
+  --bs-btn-font-size: 1rem;
+}
