@@ -1,8 +1,10 @@
-import FooterAdmin from "@/components/Footer/FooterAdmin";
-import HeaderAdmin from "@/components/Header/HeaderAdmin";
 import StoreProvider from "@/contexts/StoreProvider";
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import "../../../scss/globals.scss";
+import UserAuthentication from "@/contexts/UserAuthentication";
+import ProtectedRoute from "@/contexts/ProtectedRoute";
+import LayoutAdmin from "@/components/Layout/LayoutAdmin";
 
 const geistSans = localFont({
   src: "../../../fonts/GeistVF.woff",
@@ -29,9 +31,11 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
         <StoreProvider>
-          <HeaderAdmin />
-          {children}
-          <FooterAdmin />
+          <UserAuthentication>
+            <ProtectedRoute>
+              <LayoutAdmin>{children}</LayoutAdmin>
+            </ProtectedRoute>
+          </UserAuthentication>
         </StoreProvider>
       </body>
     </html>
