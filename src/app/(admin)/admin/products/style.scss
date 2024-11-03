@@ -1,0 +1,66 @@
+@for $i from 1 through 100 {
+  #react-select-#{$i}-listbox > .css-w8dcaf-option,
+  #react-select-#{$i}-listbox > .css-qpsjt3-option {
+    color: #000000 !important;
+  }
+}
+
+.css-zpd7p-multiValue {
+  border: 1px solid rgb(0 0 0 / 0.1) !important;
+  min-width: 67px !important;
+
+  & > .css-q4gb8t:hover {
+    background-color: hsl(0, 0%, 90%) !important;
+  }
+}
+
+.css-1yznzao-multiValue {
+  background: #0000009e !important;
+  & > .css-kvij95,
+  & > .css-1g16np1 {
+    color: #ffffff !important;
+  }
+}
+
+.gallery {
+  position: relative;
+
+  &::after {
+    content: "";
+    position: absolute;
+    background-color: rgba(0, 0, 0, 0.445);
+    inset: 0;
+    visibility: hidden;
+    opacity: 0;
+    transition: all 0.2s;
+    pointer-events: none;
+  }
+
+  &:hover::after {
+    visibility: visible;
+    opacity: 1;
+  }
+
+  & .gallery-icons {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    visibility: hidden;
+    opacity: 0;
+    transition: all 0.2s;
+    z-index: 999;
+
+    & svg:hover {
+      color: rgb(220 53 69) !important;
+    }
+  }
+
+  &:hover .gallery-icons {
+    visibility: visible;
+    opacity: 1;
+  }
+}

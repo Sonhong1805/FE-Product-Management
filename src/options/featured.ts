@@ -27,3 +27,10 @@ export const adminBlogsFeaturedOptions: readonly Option[] = [
   { value: "status-false", label: "Dừng hoạt động" },
   { value: "deleted-true", label: "Xoá" },
 ];
+
+export const adminOrdersFeaturedOptions: readonly Option[] = [
+  { value: "status-APPROVED", label: "Duyệt đơn" },
+  { value: "status-PENDING", label: "Chờ duyệt" },
+  { value: "status-CANCELED", label: "Huỷ đơn" },
+  { value: "deleted-true", label: "Xoá" },
+];

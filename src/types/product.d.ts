@@ -29,8 +29,11 @@ interface IRating {
 
 interface IProduct {
   _id: string;
-  slug: string;
   title: string;
+  slug: string;
+  description: string;
+  label: Option;
+  colors: Option[] | null;
   thumbnail: FileList | string;
   images: FileList | string[];
   category: ICategory;
@@ -40,28 +43,23 @@ interface IProduct {
   descriptions: string;
   quantity: number;
   sold: number;
-  highlights: Option[];
+  tags: Option[] | null;
   variants: IVariant[];
   ratings: IRating[];
   status: boolean;
   updatedAt?: Date;
 }
 
-type IProductInputs = Omit<IProduct, "sold" | "status" | "updatedAt" | "slug">;
+type IProductInputs = Omit<IProduct, "sold" | "status" | "updatedAt">;
 type IRatingInputs = Pick<IRating, "star" | "content">;
-
-interface IProductSearch {
-  keywords: string;
-  priceTo: number;
-  priceFrom: number;
-  filter: Option | null;
-  categorySlug?: string[];
-}
 
 type IProductQueries = {
   keywords: string;
   priceTo: number;
   priceFrom: number;
   categorySlug?: string[];
-  sort: Option;
+  filter: Option | null;
+  colors?: string[];
+  tags?: string[];
+  label?: string;
 };

@@ -5,10 +5,24 @@ interface IInitialState {
   isLoading: boolean;
   data: IProduct;
   selectedVariant: string;
+  previewVariant: {
+    index: number;
+    thumbnail: string;
+    price: number;
+    discount: number;
+    discountedPrice: number;
+  };
 }
 const initialState: IInitialState = {
   isLoading: true,
   selectedVariant: "",
+  previewVariant: {
+    index: 0,
+    thumbnail: "",
+    price: 0,
+    discount: 0,
+    discountedPrice: 0,
+  },
   data: {
     _id: "",
     category: {
@@ -21,11 +35,15 @@ const initialState: IInitialState = {
       title: "",
       children: [],
       updatedAt: "",
+      productIds: [],
     },
     descriptions: "",
     discount: 0,
     discountedPrice: 0,
-    highlights: [],
+    tags: [],
+    colors: [],
+    description: "",
+    label: { label: "", value: "" },
     images: [],
     price: 0,
     quantity: 0,
@@ -52,7 +70,18 @@ export const productDetailSlice = createSlice({
       state.data.discount = discount;
       state.data.discountedPrice = discountedPrice;
     },
+    previewVariants: (state, action) => {
+      const { index, name, thumbnail, price, discount, discountedPrice } =
+        action.payload;
+      state.previewVariant.index = index;
+      state.selectedVariant = name;
+      state.previewVariant.thumbnail = thumbnail;
+      state.previewVariant.price = price;
+      state.previewVariant.discount = discount;
+      state.previewVariant.discountedPrice = discountedPrice;
+    },
     clearSelectedVariant: (state) => {
+      state.previewVariant.index = 0;
       state.selectedVariant = "";
     },
     deleteRatingsItem: (state, action) => {
@@ -66,6 +95,12 @@ export const productDetailSlice = createSlice({
   extraReducers: (builder) => {
     builder.addCase(fetchProductDetail.fulfilled, (state, action) => {
       state.data = action.payload.data || state.data;
+      const { thumbnail, price, discount, discountedPrice } =
+        action.payload.data || state.data;
+      state.previewVariant.thumbnail = thumbnail + "";
+      state.previewVariant.price = price;
+      state.previewVariant.discount = discount;
+      state.previewVariant.discountedPrice = discountedPrice;
     });
     builder.addCase(createRatings.fulfilled, (state, action) => {
       state.data.ratings.unshift(action.payload.data as IRating);
@@ -73,7 +108,11 @@ export const productDetailSlice = createSlice({
   },
 });
 
-export const { changeVariant, clearSelectedVariant, deleteRatingsItem } =
-  productDetailSlice.actions;
+export const {
+  changeVariant,
+  clearSelectedVariant,
+  deleteRatingsItem,
+  previewVariants,
+} = productDetailSlice.actions;
 
 export default productDetailSlice.reducer;

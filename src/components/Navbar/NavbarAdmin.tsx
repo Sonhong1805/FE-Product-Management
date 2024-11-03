@@ -8,6 +8,9 @@ import React, { useEffect } from "react";
 import { Nav, Navbar } from "react-bootstrap";
 
 const NavbarAdmin = ({ pathname }: any) => {
+  const userPermissions = useAppSelector(
+    (state) => state.user.userInfo.role.permissions
+  );
   const setting = useAppSelector((state) => state.setting.data);
   const dispatch = useAppDispatch();
   useEffect(() => {
@@ -31,16 +34,19 @@ const NavbarAdmin = ({ pathname }: any) => {
         />
       </Link>
       <Nav className="me-auto w-100">
-        {adminNavbarLinks.map((link) => (
-          <Link
-            className={`link-underline link-underline-opacity-0 w-100 d-block text-light px-2 py-3 ${
-              pathname.startsWith(link.href) && "bg-light-subtle"
-            }`}
-            href={link.href}
-            key={link.id}>
-            {link.content}
-          </Link>
-        ))}
+        {adminNavbarLinks.map(
+          (link) =>
+            userPermissions.includes(link.permission) && (
+              <Link
+                className={`link-underline link-underline-opacity-0 w-100 d-block text-light px-2 py-3 ${
+                  pathname.startsWith(link.href) && "bg-light-subtle"
+                }`}
+                href={link.href}
+                key={link.id}>
+                {link.content}
+              </Link>
+            )
+        )}
       </Nav>
     </Navbar>
   );

@@ -2,6 +2,7 @@ interface ICategory {
   _id: string;
   title: string;
   parent_slug: string;
+  productIds: string[];
   status: boolean;
   deleted: boolean;
   createdAt: string;

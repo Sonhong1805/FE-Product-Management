@@ -6,9 +6,10 @@ interface IProps {
   roles: IRole[];
   onHandleSelectedAll: (e: ChangeEvent<HTMLInputElement>) => void;
   value: string;
+  disabled: boolean;
 }
 const RowPermissionParent = (props: IProps) => {
-  const { title, roles, onHandleSelectedAll, value } = props;
+  const { title, roles, onHandleSelectedAll, value, disabled } = props;
   return (
     <tr>
       <td className="bg-secondary-subtle fw-bold">{title}</td>
@@ -18,6 +19,7 @@ const RowPermissionParent = (props: IProps) => {
             type="checkbox"
             value={value}
             id={item._id}
+            disabled={disabled}
             onChange={onHandleSelectedAll}
             checked={Object.values(
               permissionAll[value as keyof IPermissionAll]

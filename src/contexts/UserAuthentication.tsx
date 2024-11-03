@@ -13,11 +13,12 @@ const UserAuthentication = ({ children }: { children: ReactNode }) => {
   const publicRoutes = [
     "/login",
     "/register",
-    "/forgot-password",
+    "/password/forgot",
+    "/password/otp",
+    "/password/reset",
     "/",
     "/blog",
     "/about",
-    "/shop",
     "/contact",
   ];
 
@@ -36,7 +37,9 @@ const UserAuthentication = ({ children }: { children: ReactNode }) => {
     <>
       {!isLoading ||
       publicRoutes.includes(pathname) ||
-      pathname.startsWith("/product") ? (
+      pathname.startsWith("/product") ||
+      pathname.startsWith("/shop") ||
+      pathname.startsWith("/admin") ? (
         children
       ) : (
         <Loading />

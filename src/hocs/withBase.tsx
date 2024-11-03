@@ -1,39 +1,14 @@
+import { useAppDispatch } from "@/lib/hooks";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback } from "react";
-
-interface WithBaseProps {
-  router: ReturnType<typeof useRouter>;
-  createQueryString: (name: string, value: string) => string;
-  deleteQueryString: (name: string) => string;
-}
 
 const withBase = <P extends object>(
-  Component: React.ComponentType<P & WithBaseProps>
+  Component: React.ComponentType<P & IWithBaseProps>
 ) => {
-  return (props: Omit<P, keyof WithBaseProps>) => {
+  return (props: Omit<P, keyof IWithBaseProps>) => {
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
-
-    const createQueryString = useCallback(
-      (name: string, value: string) => {
-        const params = new URLSearchParams(searchParams.toString());
-        params.set(name, value);
-
-        return params.toString();
-      },
-      [searchParams]
-    );
-
-    const deleteQueryString = useCallback(
-      (name: string) => {
-        const params = new URLSearchParams(searchParams.toString());
-        params.delete(name);
-
-        return params.toString();
-      },
-      [searchParams]
-    );
+    const dispatch = useAppDispatch();
 
     const rangeCount = (items: any, pagination: IPagination) => {
       const currentPage = Number(searchParams?.get("page")) || 1;
@@ -49,9 +24,8 @@ const withBase = <P extends object>(
         router={router}
         pathname={pathname}
         searchParams={searchParams}
-        createQueryString={createQueryString}
-        deleteQueryString={deleteQueryString}
         rangeCount={rangeCount}
+        dispatch={dispatch}
       />
     );
   };

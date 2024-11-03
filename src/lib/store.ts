@@ -4,6 +4,7 @@ import settingReducer from "../lib/features/setting/settingSlice";
 import categoryReducer from "../lib/features/category/categorySlice";
 import productReducer from "../lib/features/product/productSlice";
 import productDetailReducer from "../lib/features/productDetail/productDetailSlice";
+import orderReducer from "../lib/features/order/orderSlice";
 
 const rootReducer = combineReducers({
   user: userReducer,
@@ -11,6 +12,7 @@ const rootReducer = combineReducers({
   categories: categoryReducer,
   products: productReducer,
   productDetail: productDetailReducer,
+  order: orderReducer,
 });
 
 export const makeStore = () => {

@@ -15,8 +15,12 @@ import { adminCategoriesFeaturedOptions } from "@/options/featured";
 import { adminCategoriesFilteredOptions } from "@/options/filter";
 import { nonAccentVietnamese } from "@/helpers/nonAccentVietnamese";
 import RowNested from "@/components/Row/RowNested";
+import { useAppSelector } from "@/lib/hooks";
 
 const Page = () => {
+  const userPermissions = useAppSelector(
+    (state) => state.user.userInfo.role.permissions
+  );
   const [modalIsOpen, setIsOpen] = useState(false);
   const [categories, setCategories] = useState<ICategory[]>([]);
   const [selectedId, setSelectedId] = useState<string>("");
@@ -273,13 +277,15 @@ const Page = () => {
     <Container>
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2>Quản lý danh mục</h2>
-        <Button
-          variant="outline-success"
-          className="center gap-2"
-          aria-hidden="false"
-          onClick={openModal}>
-          <CiCirclePlus size={20} /> <span>Thêm mới</span>
-        </Button>
+        {userPermissions.includes("categories_create") && (
+          <Button
+            variant="outline-success"
+            className="center gap-2"
+            aria-hidden="false"
+            onClick={openModal}>
+            <CiCirclePlus size={20} /> <span>Thêm mới</span>
+          </Button>
+        )}
       </div>
       <Tabs
         defaultActiveKey="featured"

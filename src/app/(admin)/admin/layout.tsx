@@ -5,6 +5,7 @@ import "../../../scss/globals.scss";
 import UserAuthentication from "@/contexts/UserAuthentication";
 import ProtectedRoute from "@/contexts/ProtectedRoute";
 import LayoutAdmin from "@/components/Layout/LayoutAdmin";
+import "viewerjs/dist/viewer.css";
 
 const geistSans = localFont({
   src: "../../../fonts/GeistVF.woff",

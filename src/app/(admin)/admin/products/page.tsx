@@ -1,12 +1,24 @@
 "use client";
-import Pagination from "@/components/Pagination/Pagination";
+import Loading from "@/components/Loading/Loading";
+import Pagination from "@/components/Pagination";
 import priceFormat from "@/helpers/priceFormat";
 import withBase from "@/hocs/withBase";
+import {
+  deletedProduct,
+  handlePagination,
+  handleQueries,
+  selectedIdsChanged,
+  seletedIdsChangedAll,
+  updateFeature,
+} from "@/lib/features/product/productSlice";
+import { fetchProducts } from "@/lib/features/product/productThunk";
+import { useAppDispatch, useAppSelector } from "@/lib/hooks";
 import { adminProductsFeaturedOptions } from "@/options/featured";
 import { adminProductsFilteredOptions } from "@/options/filter";
 import ProductsService from "@/services/products";
 import moment from "moment";
 import Image from "next/image";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import {
   Badge,
@@ -26,112 +38,95 @@ import { TiEdit } from "react-icons/ti";
 import Select, { SingleValue } from "react-select";
 import Swal from "sweetalert2";
 
-const Page = (props: any) => {
-  const { router, pathname, searchParams, rangeCount } = props;
-  const [selectedIds, setSelectedIds] = useState<(string | number)[]>([]);
-  const [products, setProducts] = useState<IProduct[]>([]);
-  const [selectedFeatured, setSelectedFeatured] = useState<Option | null>(null);
-  const [pagination, setPagination] = useState<IPagination>({
-    limit: 5,
-    page: 1,
-    totalItems: 0,
-    totalPages: 0,
-  });
-  const [search, setSearch] = useState<IProductSearch>({
-    keywords: searchParams.get("title") || "",
-    priceTo: searchParams.get("priceTo") || 0,
-    priceFrom: searchParams.get("priceFrom") || 0,
-    filter: {
-      label: localStorage.getItem("filterLabel") || "",
-      value: localStorage.getItem("filterValue") || "",
-    },
-  });
+const Page = (props: IWithBaseProps) => {
+  const { searchParams, rangeCount, router, pathname, dispatch } = props;
 
-  const fetchProducts = async () => {
-    const response = await ProductsService.index({
-      page: pagination.page,
-      limit: pagination.limit,
-      ...(search.keywords && { title: search.keywords }),
-      ...(search.priceFrom > 0 && { "discountedPrice[gte]": search.priceFrom }),
-      ...(search.priceTo > 0 && { "discountedPrice[lte]": search.priceTo }),
-      ...(search.filter !== null
-        ? {
-            [search.filter?.value?.split(",")[0]]:
-              search.filter?.value?.split(",")[1],
-          }
-        : {}),
-    });
-    if (response?.success && response?.data && response?.pagination) {
-      setProducts(response.data || []);
-      setPagination(response.pagination);
-    }
-  };
+  const userPermissions = useAppSelector(
+    (state) => state.user.userInfo.role.permissions
+  );
+  const products = useAppSelector((state) => state.products.data);
+  const [selectedFeatured, setSelectedFeatured] = useState<Option | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
+  const selectedIds = useAppSelector((state) => state.products.selectedIds);
+  const pagination = useAppSelector((state) => state.products.pagination);
+  const queries = useAppSelector((state) => state.products.queries);
 
   useEffect(() => {
     const params = new URLSearchParams(searchParams.toString());
-    if (pagination.page) {
-      params.set("page", pagination.page.toString());
-    }
+    const setOrDeleteParam = (
+      key: string,
+      value: string | number | boolean
+    ) => {
+      if (value) {
+        params.set(key, value.toString());
+      } else {
+        params.delete(key);
+      }
+    };
 
-    if (search.keywords) {
-      params.set("title", search.keywords);
-    } else {
-      params.delete("title");
-    }
+    setOrDeleteParam("page", pagination.page);
+    setOrDeleteParam("name", queries.keywords);
+    setOrDeleteParam("priceFrom", queries.priceFrom);
+    setOrDeleteParam("priceTo", queries.priceTo);
 
-    if (search.priceFrom > 0) {
-      params.set("priceFrom", search.priceFrom.toString());
-    } else {
-      params.delete("priceFrom");
-    }
-    if (search.priceTo > 0) {
-      params.set("priceTo", search.priceTo.toString());
-    } else {
-      params.delete("priceTo");
-    }
     const storageParamsKey = localStorage
-      .getItem("filterValue")
+      .getItem("productFilterValue")
       ?.split(",")[0] as string;
-    if (search.filter && search.filter.value) {
-      const filterLabel = search.filter.label;
-      const filterValue = search.filter.value;
-      const [filterKey] = search.filter.value.split(",");
+
+    if (queries.filter && queries.filter.value) {
+      const filterLabel = queries.filter.label;
+      const filterValue = queries.filter.value;
+      const [filterKey] = queries.filter.value.split(",");
       if (filterKey !== storageParamsKey) {
         params.delete(storageParamsKey);
         params.set(filterKey, filterLabel);
-        localStorage.setItem("filterValue", filterValue);
-        localStorage.setItem("filterLabel", filterLabel);
+        localStorage.setItem("productFilterValue", filterValue);
+        localStorage.setItem("productFilterLabel", filterLabel);
       } else {
         params.set(filterKey, filterLabel);
-        localStorage.setItem("filterValue", filterValue);
-        localStorage.setItem("filterLabel", filterLabel);
+        localStorage.setItem("productFilterValue", filterValue);
+        localStorage.setItem("productFilterLabel", filterLabel);
       }
     } else {
       params.delete(storageParamsKey);
-      localStorage.removeItem("filterValue");
-      localStorage.removeItem("filterLabel");
+      localStorage.removeItem("productFilterValue");
+      localStorage.removeItem("productFilterLabel");
     }
 
-    router.push(pathname + "?" + params.toString());
-    fetchProducts();
-  }, [pagination.page, search]);
-
-  const handleSeletedAll = () => {
-    if (selectedIds.length === products.length) {
-      setSelectedIds([]);
-    } else {
-      const ids: (string | number)[] = products.map(
-        (product: IProduct) => product._id
+    (async () => {
+      setLoading(true);
+      await dispatch(
+        fetchProducts({
+          page: pagination.page,
+          limit: pagination.limit,
+          ...(queries.keywords && { title: queries.keywords }),
+          ...(queries.priceFrom > 0 && {
+            "discountedPrice[gte]": queries.priceFrom,
+          }),
+          ...(queries.priceTo > 0 && {
+            "discountedPrice[lte]": queries.priceTo,
+          }),
+          ...(queries.categorySlug?.length && {
+            categorySlug: queries.categorySlug,
+          }),
+          ...(queries.filter !== null
+            ? {
+                [queries.filter?.value?.split(",")[0]]:
+                  queries.filter?.value?.split(",")[1],
+              }
+            : {}),
+        })
       );
-      setSelectedIds(ids);
-    }
-  };
+      setLoading(false);
+    })();
+    router.push(pathname + "?" + params.toString());
+  }, [queries, pagination.page]);
 
   const handleChangeOptionsFeatured = (option: Option | null) => {
     setSelectedFeatured(option);
   };
 
-  const deleteProduct = async (id: string) => {
+  const handleDeleteProduct = async (cid: string, pid: string) => {
     Swal.fire({
       text: "Bạn có chắc muốn xoá sản phẩm này?",
       icon: "warning",
@@ -142,25 +137,9 @@ const Page = (props: any) => {
       cancelButtonText: "Huỷ",
     }).then(async (result) => {
       if (result.isConfirmed) {
-        const response = await ProductsService.delete(id);
-        if (response?.success) {
-          setProducts((prev) =>
-            prev.filter(
-              (product: IProduct) => product._id !== response.data?._id
-            )
-          );
-          if (products.length === 1) {
-            setPagination((prev) => ({
-              ...prev,
-              page: Math.max(prev.page - 1, 1),
-              totalItems: prev.totalItems - 1,
-            }));
-          } else {
-            setPagination((prev) => ({
-              ...prev,
-              totalItems: prev.totalItems - 1,
-            }));
-          }
+        const response = await ProductsService.delete(cid, pid);
+        if (response.success) {
+          dispatch(deletedProduct(pid));
           Swal.fire({
             icon: "success",
             title: response?.message,
@@ -172,25 +151,21 @@ const Page = (props: any) => {
     });
   };
 
-  const handleSelectedIds = (id: string) => {
-    setSelectedIds((prev) => {
-      if (prev.includes(id)) {
-        return prev.filter((item) => item !== id);
-      }
-      return [...prev, id];
-    });
-  };
-
   const handleFeatured = async () => {
     if (selectedIds.length > 0 && selectedFeatured) {
       const response = await ProductsService.changeFeature({
         ids: selectedIds,
         feature: selectedFeatured.value,
       });
-      if (response?.success) {
-        fetchProducts();
+      if (response.success) {
+        await dispatch(
+          updateFeature({
+            ids: selectedIds,
+            feature: selectedFeatured.value,
+          })
+        );
         Swal.fire({
-          icon: response?.success ? "success" : "error",
+          icon: "success",
           title: response?.message,
           showConfirmButton: false,
           timer: 2000,
@@ -199,56 +174,66 @@ const Page = (props: any) => {
     }
   };
 
-  const { register, handleSubmit, setValue } = useForm<IProductSearch>({
+  const { register, handleSubmit, setValue } = useForm<IProductQueries>({
     defaultValues: {
-      keywords: search.keywords,
+      keywords: queries.keywords,
+      priceFrom: queries.priceFrom,
+      priceTo: queries.priceTo,
     },
   });
-  const onSubmit: SubmitHandler<IProductSearch> = async (
-    data: IProductSearch
-  ) => {
+  const onSubmit: SubmitHandler<IProductQueries> = (data: IProductQueries) => {
+    dispatch(handlePagination({ ...pagination, page: 1 }));
     const filterKey = localStorage
-      .getItem("filterValue")
+      .getItem("productFilterValue")
       ?.split(",")[0] as string;
     if (!data.filter || !data.filter.value) {
       if (filterKey) {
-        setSearch({
-          ...search,
-          filter: {
-            value: "",
-            label: "",
-          },
-        });
+        dispatch(
+          handleQueries({
+            ...queries,
+            filter: {
+              value: "",
+              label: "",
+            },
+          })
+        );
       } else {
-        setSearch({
-          ...search,
+        dispatch(
+          handleQueries({
+            ...queries,
+            keywords: data.keywords,
+            priceFrom: isNaN(data.priceFrom) ? 0 : data.priceFrom,
+            priceTo: isNaN(data.priceTo) ? 0 : data.priceTo,
+          })
+        );
+      }
+    } else {
+      dispatch(
+        handleQueries({
+          ...queries,
           keywords: data.keywords,
           priceFrom: isNaN(data.priceFrom) ? 0 : data.priceFrom,
           priceTo: isNaN(data.priceTo) ? 0 : data.priceTo,
-        });
-      }
-    } else {
-      setSearch({
-        ...search,
-        keywords: data.keywords,
-        priceFrom: isNaN(data.priceFrom) ? 0 : data.priceFrom,
-        priceTo: isNaN(data.priceTo) ? 0 : data.priceTo,
-        filter: data.filter,
-      });
+          filter: data.filter,
+        })
+      );
     }
   };
 
   return (
     <Container>
+      {loading && <Loading />}
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2>Quản lý sản phẩm</h2>
-        <Button
-          variant="outline-success"
-          className="center gap-2"
-          aria-hidden="false"
-          onClick={() => router.push("/admin/products/create")}>
-          <CiCirclePlus size={20} /> <span>Thêm mới</span>
-        </Button>
+        {userPermissions.includes("products_create") && (
+          <Button
+            variant="outline-success"
+            className="center gap-2"
+            aria-hidden="false"
+            onClick={() => router.push("/admin/products/create")}>
+            <CiCirclePlus size={20} /> <span>Thêm mới</span>
+          </Button>
+        )}
       </div>
       <Tabs
         defaultActiveKey="search"
@@ -290,7 +275,7 @@ const Page = (props: any) => {
               name="filter"
               isClearable={true}
               defaultValue={
-                search.filter && search.filter.value ? search.filter : null
+                queries.filter && queries.filter.value ? queries.filter : null
               }
               options={adminProductsFilteredOptions}
               onChange={(option: SingleValue<Option>) =>
@@ -333,7 +318,7 @@ const Page = (props: any) => {
                   selectedIds.length > 0 &&
                   selectedIds.length === products.length
                 }
-                onChange={handleSeletedAll}
+                onChange={() => dispatch(seletedIdsChangedAll())}
               />
             </th>
             <th>STT</th>
@@ -356,7 +341,7 @@ const Page = (props: any) => {
                   <Form.Check
                     type={"checkbox"}
                     checked={selectedIds.includes(product._id)}
-                    onChange={() => handleSelectedIds(product._id)}
+                    onChange={() => dispatch(selectedIdsChanged(product._id))}
                   />
                 </td>
                 <td>{(pagination.page - 1) * pagination.limit + index + 1}</td>
@@ -371,10 +356,14 @@ const Page = (props: any) => {
                 </td>
                 <td>{product.category?.title}</td>
                 <td>
-                  <span className="text-decoration-line-through text-secondary">
-                    {priceFormat(product.price)}
-                  </span>{" "}
-                  <span>(-{product.discount}%)</span>
+                  {product.discount !== 0 && (
+                    <div>
+                      <span className="text-decoration-line-through text-secondary">
+                        {priceFormat(product.price)}
+                      </span>{" "}
+                      <span>(-{product.discount}%)</span>
+                    </div>
+                  )}
                   <div className="text-danger text-semibold text-price">
                     {priceFormat(product.discountedPrice)}
                   </div>
@@ -389,42 +378,52 @@ const Page = (props: any) => {
                 <td>{moment(product.updatedAt).format("DD-MM-YYYY")}</td>
                 <td>
                   <div className="d-grid gap-2 grid-2">
-                    <Button
-                      variant="outline-success"
-                      className="center"
-                      onClick={() =>
-                        router.push(
-                          "/admin/products/create?slug=" + product.slug
-                        )
-                      }>
-                      <FiEye />
-                    </Button>
-                    <Button
-                      variant="outline-warning"
-                      className="center"
-                      onClick={() =>
-                        router.push(
-                          "/admin/products/create?slug=" + product.slug
-                        )
-                      }>
-                      <TiEdit />
-                    </Button>
-                    <Button
-                      variant="outline-danger"
-                      className="center"
-                      onClick={() => deleteProduct(product._id)}>
-                      <TfiTrash />
-                    </Button>
-                    <Button
-                      variant="outline-secondary"
-                      className="center"
-                      onClick={() =>
-                        router.push(
-                          "/admin/products/variants?id=" + product._id
-                        )
-                      }>
-                      <AiOutlineTags />
-                    </Button>
+                    {userPermissions.includes("products_view") && (
+                      <Button
+                        variant="outline-success"
+                        className="center"
+                        onClick={() =>
+                          router.push(
+                            "/admin/products/create?slug=" + product.slug
+                          )
+                        }>
+                        <FiEye />
+                      </Button>
+                    )}
+                    {userPermissions.includes("products_update") && (
+                      <Button
+                        variant="outline-warning"
+                        className="center"
+                        onClick={() =>
+                          router.push(
+                            "/admin/products/create?slug=" + product.slug
+                          )
+                        }>
+                        <TiEdit />
+                      </Button>
+                    )}
+                    {userPermissions.includes("products_delete") && (
+                      <Button
+                        variant="outline-danger"
+                        className="center"
+                        onClick={() =>
+                          handleDeleteProduct(product.category._id, product._id)
+                        }>
+                        <TfiTrash />
+                      </Button>
+                    )}
+                    {userPermissions.includes("products_update") && (
+                      <Button
+                        variant="outline-secondary"
+                        className="center"
+                        onClick={() =>
+                          router.push(
+                            "/admin/products/variants?slug=" + product.slug
+                          )
+                        }>
+                        <AiOutlineTags />
+                      </Button>
+                    )}
                   </div>
                 </td>
               </tr>
@@ -441,7 +440,10 @@ const Page = (props: any) => {
           Hiển thị {rangeCount(products, pagination)}
           trên {pagination.totalItems} kết quả.
         </div>
-        <Pagination pagination={pagination} setPagination={setPagination} />
+        <Pagination
+          pagination={pagination}
+          onHandlePagination={handlePagination}
+        />
       </div>
     </Container>
   );

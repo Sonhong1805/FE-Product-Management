@@ -1,10 +1,12 @@
 "use client";
 import priceFormat from "@/helpers/priceFormat";
 import withBase from "@/hocs/withBase";
+import { useAppSelector } from "@/lib/hooks";
+import ProductsService from "@/services/products";
 import VariantsService from "@/services/variants";
 import moment from "moment";
 import Image from "next/image";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Badge, Button, Container, Form, Table } from "react-bootstrap";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { BiExit } from "react-icons/bi";
@@ -12,27 +14,8 @@ import { TfiTrash } from "react-icons/tfi";
 import { TiEdit } from "react-icons/ti";
 import Swal from "sweetalert2";
 
-const Page = (props: any) => {
+const Page = (props: IWithBaseProps) => {
   const { router, searchParams } = props;
-  const [thumbnailPreview, setThumbnailPreview] = useState("");
-  const [variants, setVariants] = useState<IVariant[]>([]);
-
-  useEffect(() => {
-    const fetchVariants = async () => {
-      const response = await VariantsService.index(searchParams.get("id"));
-      if (response.success && response.data) {
-        const variants = response.data as IVariant[];
-        const sortedVariants = variants.sort((a: IVariant, b: IVariant) => {
-          const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
-          const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
-          return dateB - dateA;
-        });
-        setVariants(sortedVariants);
-      }
-    };
-    fetchVariants();
-  }, []);
-
   const {
     register,
     handleSubmit,
@@ -41,7 +24,41 @@ const Page = (props: any) => {
     watch,
     reset,
     formState: { errors },
-  } = useForm<IVariant>();
+  } = useForm<IVariant>({});
+  const [thumbnailPreview, setThumbnailPreview] = useState("");
+  const [variants, setVariants] = useState<IVariant[]>([]);
+
+  const initialPrice = useRef(0);
+  const initialDiscount = useRef(0);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const slug = searchParams.get("slug");
+        const [productResponse, variantsResponse] = await Promise.all([
+          ProductsService.detail(slug),
+          VariantsService.index(slug),
+        ]);
+        if (productResponse.success && productResponse.data) {
+          const price = productResponse.data.price || 0;
+          const discount = productResponse.data.discount || 0;
+          initialPrice.current = price;
+          initialDiscount.current = discount;
+          setValue("price", price);
+          setValue("discount", discount);
+        }
+        if (variantsResponse.success && variantsResponse.data) {
+          const variants = variantsResponse.data as IVariant[];
+          setVariants(variants);
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    fetchData();
+  }, []);
+
   const onSubmit: SubmitHandler<IVariant> = async (data: IVariant) => {
     const formData = new FormData();
     Object.entries(data).forEach(([key, value]) => {
@@ -53,17 +70,23 @@ const Page = (props: any) => {
     });
     if (watch("_id")) {
       const response = await VariantsService.update(
-        searchParams.get("id"),
+        searchParams.get("slug"),
         watch("_id"),
         formData
       );
       if (response.success && response.data) {
         setVariants((prev: IVariant[]) =>
-          prev.map((variant: IVariant) =>
-            variant._id === response.data?._id
-              ? { ...variant, ...response.data }
-              : variant
-          )
+          prev
+            .map((variant: IVariant) =>
+              variant._id === response.data?._id
+                ? { ...variant, ...response.data }
+                : variant
+            )
+            .sort((a: IVariant, b: IVariant) => {
+              const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+              const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+              return dateB - dateA;
+            })
         );
         Swal.fire({
           position: "center",
@@ -76,7 +99,7 @@ const Page = (props: any) => {
       }
     } else {
       const response = await VariantsService.create(
-        searchParams.get("id"),
+        searchParams.get("slug"),
         formData
       );
       if (response.success && response.data) {
@@ -103,7 +126,12 @@ const Page = (props: any) => {
 
   const handleReset = () => {
     setThumbnailPreview("");
-    reset();
+    reset({
+      name: "",
+      thumbnail: "",
+      price: initialPrice.current,
+      discount: initialDiscount.current,
+    });
   };
 
   const handleEditVariant = (variant: IVariant) => {
@@ -128,7 +156,7 @@ const Page = (props: any) => {
     }).then(async (result) => {
       if (result.isConfirmed) {
         const response = await VariantsService.delete(
-          searchParams.get("id"),
+          searchParams.get("slug"),
           id
         );
         if (response?.success && response.data) {
@@ -179,8 +207,8 @@ const Page = (props: any) => {
                 <Form.Label>Giá (VNĐ)</Form.Label>
                 <Form.Control
                   type="number"
-                  defaultValue={0}
                   min={0}
+                  defaultValue={getValues("price")}
                   placeholder="Nhập giá sản phẩm"
                   {...register("price", {
                     valueAsNumber: true,
@@ -193,8 +221,8 @@ const Page = (props: any) => {
                 <Form.Label>Phần trăm giảm giá (??%)</Form.Label>
                 <Form.Control
                   type="number"
-                  defaultValue={0}
                   min={0}
+                  defaultValue={getValues("discount")}
                   placeholder="Nhập phần trăm giảm giá"
                   {...register("discount", {
                     valueAsNumber: true,

@@ -42,6 +42,12 @@ const CategoriesService = {
   }): Promise<IResponse<ICategory>> => {
     return axios.post("/categories/feature", { ids, feature });
   },
+
+  getSubCategories: (
+    categorySlug: string | undefined
+  ): Promise<IResponse<ICategory[]>> => {
+    return axios.post("/categories/get-sub-categories", { categorySlug });
+  },
 };
 
 export default CategoriesService;

@@ -9,6 +9,9 @@ import { SubmitHandler, useForm } from "react-hook-form";
 import Swal from "sweetalert2";
 
 const Page = () => {
+  const userPermissions = useAppSelector(
+    (state) => state.user.userInfo.role.permissions
+  );
   const dispatch = useAppDispatch();
   const [isEditable, setIsEditable] = useState<boolean>(true);
   const [logoPreview, setLogoPreview] = useState("");
@@ -74,39 +77,43 @@ const Page = () => {
       <Form onSubmit={handleSubmit(onSubmit)}>
         <div className="d-flex justify-content-between align-items-center mb-4">
           <h2>Cài đặt chung</h2>
-          {!isEditable ? (
-            <div className="d-flex gap-2">
-              <Button
-                type="submit"
-                variant="primary"
-                className="center gap-2"
-                aria-hidden="false">
-                <span>Cập nhật</span>
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                className="center gap-2"
-                aria-hidden="false"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setIsEditable(true);
-                }}>
-                <span>Huỷ</span>
-              </Button>
-            </div>
-          ) : (
-            <Button
-              type="button"
-              variant="warning"
-              className="center gap-2"
-              aria-hidden="false"
-              onClick={(e) => {
-                e.preventDefault();
-                setIsEditable(false);
-              }}>
-              <span>Chỉnh sửa</span>
-            </Button>
+          {userPermissions.includes("settings_update") && (
+            <>
+              {!isEditable ? (
+                <div className="d-flex gap-2">
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    className="center gap-2"
+                    aria-hidden="false">
+                    <span>Cập nhật</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="center gap-2"
+                    aria-hidden="false"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setIsEditable(true);
+                    }}>
+                    <span>Huỷ</span>
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  type="button"
+                  variant="warning"
+                  className="center gap-2"
+                  aria-hidden="false"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setIsEditable(false);
+                  }}>
+                  <span>Chỉnh sửa</span>
+                </Button>
+              )}
+            </>
           )}
         </div>
         <div className="d-flex gap-5 mb-5">

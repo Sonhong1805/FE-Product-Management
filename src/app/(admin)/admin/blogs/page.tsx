@@ -18,12 +18,16 @@ import { TfiTrash } from "react-icons/tfi";
 import { TiEdit } from "react-icons/ti";
 import Select, { SingleValue } from "react-select";
 import Swal from "sweetalert2";
-import Pagination from "@/components/Pagination/Pagination";
 import BlogsService from "@/services/blogs";
 import { adminBlogsFeaturedOptions } from "@/options/featured";
 import Image from "next/image";
+import { useAppSelector } from "@/lib/hooks";
+import Pagination from "@/components/Pagination";
 
 const Page = (props: any) => {
+  const userPermissions = useAppSelector(
+    (state) => state.user.userInfo.role.permissions
+  );
   const { router, pathname, searchParams, rangeCount } = props;
   const [selectedIds, setSelectedIds] = useState<(string | number)[]>([]);
   const [blogs, setBlogs] = useState<IBlog[]>([]);
@@ -113,7 +117,6 @@ const Page = (props: any) => {
           setBlogs((prev: IBlog[]) =>
             prev.filter((blog: IBlog) => blog._id !== response.data?._id)
           );
-
           if (blogs.length === 1) {
             setPagination((prev) => ({
               ...prev,
@@ -181,13 +184,15 @@ const Page = (props: any) => {
     <Container>
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2>Quản lý bài viết</h2>
-        <Button
-          variant="outline-success"
-          className="center gap-2"
-          aria-hidden="false"
-          onClick={() => router.push("/admin/blogs/create")}>
-          <CiCirclePlus size={20} /> <span>Thêm mới</span>
-        </Button>
+        {userPermissions.includes("blogs_create") && (
+          <Button
+            variant="outline-success"
+            className="center gap-2"
+            aria-hidden="false"
+            onClick={() => router.push("/admin/blogs/create")}>
+            <CiCirclePlus size={20} /> <span>Thêm mới</span>
+          </Button>
+        )}
       </div>
       <Tabs
         defaultActiveKey="search"
@@ -293,20 +298,24 @@ const Page = (props: any) => {
                 <td>{moment(blog.updatedAt).format("DD-MM-YYYY")}</td>
                 <td>
                   <div className="d-flex gap-2">
-                    <Button
-                      variant="outline-warning"
-                      className="center"
-                      onClick={() =>
-                        router.push("/admin/blogs/create?id=" + blog._id)
-                      }>
-                      <TiEdit />
-                    </Button>
-                    <Button
-                      variant="outline-danger"
-                      className="center"
-                      onClick={() => deleteBlog(blog._id)}>
-                      <TfiTrash />
-                    </Button>
+                    {userPermissions.includes("blogs_update") && (
+                      <Button
+                        variant="outline-warning"
+                        className="center"
+                        onClick={() =>
+                          router.push("/admin/blogs/create?id=" + blog._id)
+                        }>
+                        <TiEdit />
+                      </Button>
+                    )}
+                    {userPermissions.includes("blogs_delete") && (
+                      <Button
+                        variant="outline-danger"
+                        className="center"
+                        onClick={() => deleteBlog(blog._id)}>
+                        <TfiTrash />
+                      </Button>
+                    )}
                   </div>
                 </td>
               </tr>
@@ -323,7 +332,7 @@ const Page = (props: any) => {
           Hiển thị {rangeCount(blogs, pagination)}
           trên {pagination.totalItems} kết quả.
         </div>
-        <Pagination pagination={pagination} setPagination={setPagination} />
+        {/* <Pagination pagination={pagination} onHandlePagination={}  /> */}
       </div>
     </Container>
   );

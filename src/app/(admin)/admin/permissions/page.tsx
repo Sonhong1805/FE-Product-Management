@@ -3,11 +3,16 @@ import RowPermissionAll from "@/components/Row/RowPermissionAll";
 import RowPermissionChild from "@/components/Row/RowPermissionChild";
 import RowPermissionParent from "@/components/Row/RowPermissionParent";
 import { permissionAll, permissionModule } from "@/constants/permission";
+import { permissions } from "@/constants/permissions";
+import { useAppSelector } from "@/lib/hooks";
 import RolesService from "@/services/roles";
 import React, { ChangeEvent, useEffect, useRef, useState } from "react";
 import { Container, Table } from "react-bootstrap";
 
 const Page = () => {
+  const userPermissions = useAppSelector(
+    (state) => state.user.userInfo.role.permissions
+  );
   const [roles, setRoles] = useState<IRole[]>([]);
   const isFirstRender = useRef(true);
 
@@ -85,8 +90,15 @@ const Page = () => {
       prev.map((item: IRole) => {
         if (item._id === id) {
           const allPermissions = [
+            ...Object.values(permissionAll.dashboard),
             ...Object.values(permissionAll.categories),
             ...Object.values(permissionAll.products),
+            ...Object.values(permissionAll.orders),
+            ...Object.values(permissionAll.blogs),
+            ...Object.values(permissionAll.roles),
+            ...Object.values(permissionAll.permissions),
+            ...Object.values(permissionAll.accounts),
+            ...Object.values(permissionAll.settings),
           ];
 
           if (checked) {
@@ -127,67 +139,29 @@ const Page = () => {
             title="Chọn tất cả"
             roles={roles}
             onHandlePermissionAll={handlePermissionAll}
+            disabled={!userPermissions.includes("permissions_update")}
           />
-          <RowPermissionParent
-            title="Quản lý danh mục"
-            value={permissionModule.categories}
-            onHandleSelectedAll={handleSelectedAll}
-            roles={roles}
-          />
-          <RowPermissionChild
-            title="Xem"
-            roles={roles}
-            onHandleChange={handleChange}
-            permission={permissionAll.categories.view}
-          />
-          <RowPermissionChild
-            title="Thêm"
-            roles={roles}
-            onHandleChange={handleChange}
-            permission={permissionAll.categories.create}
-          />
-          <RowPermissionChild
-            title="Sửa"
-            roles={roles}
-            onHandleChange={handleChange}
-            permission={permissionAll.categories.update}
-          />
-          <RowPermissionChild
-            title="Xoá"
-            roles={roles}
-            onHandleChange={handleChange}
-            permission={permissionAll.categories.delete}
-          />
-          <RowPermissionParent
-            title="Quản lý sản phẩm"
-            value={permissionModule.products}
-            onHandleSelectedAll={handleSelectedAll}
-            roles={roles}
-          />
-          <RowPermissionChild
-            title="Xem"
-            roles={roles}
-            onHandleChange={handleChange}
-            permission={permissionAll.products.view}
-          />
-          <RowPermissionChild
-            title="Thêm"
-            roles={roles}
-            onHandleChange={handleChange}
-            permission={permissionAll.products.create}
-          />
-          <RowPermissionChild
-            title="Sửa"
-            roles={roles}
-            onHandleChange={handleChange}
-            permission={permissionAll.products.update}
-          />
-          <RowPermissionChild
-            title="Xoá"
-            roles={roles}
-            onHandleChange={handleChange}
-            permission={permissionAll.products.delete}
-          />
+          {permissions.map(({ title, module, actions }) => (
+            <React.Fragment key={title}>
+              <RowPermissionParent
+                title={title}
+                value={module}
+                onHandleSelectedAll={handleSelectedAll}
+                roles={roles}
+                disabled={!userPermissions.includes("permissions_update")}
+              />
+              {actions.map(({ title, permission }) => (
+                <RowPermissionChild
+                  key={title}
+                  title={title}
+                  roles={roles}
+                  onHandleChange={handleChange}
+                  permission={permission}
+                  disabled={!userPermissions.includes("permissions_update")}
+                />
+              ))}
+            </React.Fragment>
+          ))}
         </tbody>
       </Table>
     </Container>

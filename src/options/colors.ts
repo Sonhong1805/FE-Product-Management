@@ -1,0 +1,15 @@
+export const colorsOptions: readonly Option[] = [
+  { value: "black", label: "Đen", color: "#000000" },
+  { value: "white", label: "Trắng", color: "#FFFFFF" },
+  { value: "ocean", label: "Xanh đại dương", color: "#00B8D9" },
+  { value: "blue", label: "Xanh lam", color: "#0052CC" },
+  { value: "purple", label: "Tím", color: "#5243AA" },
+  { value: "pink", label: "Hồng", color: "#EE66A6" },
+  { value: "red", label: "Đỏ", color: "#FF5630" },
+  { value: "gray", label: "Xám", color: "#808080" },
+  { value: "brown", label: "Nâu", color: "#795757" },
+  { value: "orange", label: "Cam", color: "#FF8B00" },
+  { value: "yellow", label: "Vàng", color: "#FFC400" },
+  { value: "green", label: "Xanh lục", color: "#36B37E" },
+  { value: "silver", label: "Bạc", color: "#666666" },
+];

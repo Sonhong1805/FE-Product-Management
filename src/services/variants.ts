@@ -1,8 +1,8 @@
 import axios from "../customs/axios-customize";
 
 const VariantsService = {
-  index: (pid: string): Promise<IResponse<IVariant[]>> => {
-    return axios.get("/variants/" + pid);
+  index: (pSlug: string): Promise<IResponse<IVariant[]>> => {
+    return axios.get("/variants/" + pSlug);
   },
 
   create: (pid: string, data: FormData): Promise<IResponse<IVariant>> => {

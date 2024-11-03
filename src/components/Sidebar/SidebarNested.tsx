@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useAppSelector } from "@/lib/hooks";
 import { Form } from "react-bootstrap";
 import { FiMinus, FiPlus } from "react-icons/fi";
 
@@ -11,23 +11,31 @@ interface IProps {
 const SidebarNested = (props: IProps) => {
   const { item, expandedItems, onHandleToggleItem, onHandleFilterCategory } =
     props;
-
+  const categorySlug = useAppSelector(
+    (state) => state.products.queries.categorySlug
+  );
   return (
     <>
-      <li className="d-flex justify-content-between" key={item._id}>
+      <li className="d-flex justify-content-between mb-1" key={item._id}>
         <Form.Check
           type="checkbox"
-          label={item.title}
+          label={`${item.title} (${item.productIds.length})`}
           id={item._id}
           value={item.slug}
+          disabled={item.productIds.length === 0}
           // checked={!!expandedItems[item.slug]}
+          checked={categorySlug?.includes(item.slug)}
           onChange={() => onHandleFilterCategory(item.slug)}
         />
         {item.children && (
           <span
             style={{ cursor: "pointer" }}
             onClick={() => onHandleToggleItem(item.slug)}>
-            {expandedItems[item.slug] ? <FiMinus /> : <FiPlus />}
+            {expandedItems[item.slug] ? (
+              <FiMinus color="#36B37E" />
+            ) : (
+              <FiPlus color="#36B37E" />
+            )}
           </span>
         )}
       </li>

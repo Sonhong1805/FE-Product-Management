@@ -21,9 +21,15 @@ import { TfiTrash } from "react-icons/tfi";
 import { TiEdit } from "react-icons/ti";
 import Select, { SingleValue } from "react-select";
 import Swal from "sweetalert2";
-import Pagination from "@/components/Pagination/Pagination";
+import { MdPassword } from "react-icons/md";
+import { useAppSelector } from "@/lib/hooks";
+import Pagination from "@/components/Pagination";
 
 const Page = (props: any) => {
+  const userPermissions = useAppSelector(
+    (state) => state.user.userInfo.role.permissions
+  );
+  const userId = useAppSelector((state) => state.user.userInfo._id);
   const { router, pathname, searchParams, rangeCount } = props;
   const [selectedIds, setSelectedIds] = useState<(string | number)[]>([]);
   const [accounts, setAccounts] = useState<IUser[]>([]);
@@ -216,13 +222,15 @@ const Page = (props: any) => {
     <Container>
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2>Quản lý tài khoản</h2>
-        <Button
-          variant="outline-success"
-          className="center gap-2"
-          aria-hidden="false"
-          onClick={() => router.push("/admin/accounts/create")}>
-          <CiCirclePlus size={20} /> <span>Thêm mới</span>
-        </Button>
+        {userPermissions.includes("accounts_create") && (
+          <Button
+            variant="outline-success"
+            className="center gap-2"
+            aria-hidden="false"
+            onClick={() => router.push("/admin/accounts/create")}>
+            <CiCirclePlus size={20} /> <span>Thêm mới</span>
+          </Button>
+        )}
       </div>
       <Tabs
         defaultActiveKey="search"
@@ -338,20 +346,33 @@ const Page = (props: any) => {
                 <td>{moment(account.updatedAt).format("DD-MM-YYYY")}</td>
                 <td>
                   <div className="d-flex gap-2">
-                    <Button
-                      variant="outline-warning"
-                      className="center"
-                      onClick={() =>
-                        router.push("/admin/accounts/create?id=" + account._id)
-                      }>
-                      <TiEdit />
-                    </Button>
-                    <Button
-                      variant="outline-danger"
-                      className="center"
-                      onClick={() => deleteAccount(account._id)}>
-                      <TfiTrash />
-                    </Button>
+                    {(userPermissions.includes("accounts_update") ||
+                      account._id === userId) && (
+                      <Button
+                        variant="outline-warning"
+                        className="center"
+                        onClick={() =>
+                          router.push(
+                            "/admin/accounts/create?id=" + account._id
+                          )
+                        }>
+                        <TiEdit />
+                      </Button>
+                    )}
+                    {userPermissions.includes("accounts_delete") && (
+                      <Button
+                        variant="outline-danger"
+                        className="center"
+                        onClick={() => deleteAccount(account._id)}>
+                        <TfiTrash />
+                      </Button>
+                    )}
+                    {(userPermissions.includes("accounts_update") ||
+                      account._id === userId) && (
+                      <Button variant="outline-secondary" className="center">
+                        <MdPassword />
+                      </Button>
+                    )}
                   </div>
                 </td>
               </tr>
@@ -368,7 +389,7 @@ const Page = (props: any) => {
           Hiển thị {rangeCount(accounts, pagination)}
           trên {pagination.totalItems} kết quả.
         </div>
-        <Pagination pagination={pagination} setPagination={setPagination} />
+        {/* <Pagination pagination={pagination} onHandlePagination={} /> */}
       </div>
     </Container>
   );

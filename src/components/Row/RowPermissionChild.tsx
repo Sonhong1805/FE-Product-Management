@@ -5,9 +5,10 @@ interface IProps {
   roles: IRole[];
   onHandleChange: (e: ChangeEvent<HTMLInputElement>) => void;
   permission: string;
+  disabled: boolean;
 }
 const RowPermissionChild = (props: IProps) => {
-  const { title, roles, onHandleChange, permission } = props;
+  const { title, roles, onHandleChange, permission, disabled } = props;
   return (
     <tr>
       <td>{title}</td>
@@ -17,6 +18,7 @@ const RowPermissionChild = (props: IProps) => {
             type="checkbox"
             value={permission}
             id={item._id}
+            disabled={disabled}
             onChange={onHandleChange}
             checked={item.permissions.includes(permission)}
           />

@@ -22,8 +22,12 @@ import RolesService from "@/services/roles";
 import { adminRolesFilteredOptions } from "@/options/filter";
 import moment from "moment";
 import withBase from "@/hocs/withBase";
+import { useAppSelector } from "@/lib/hooks";
 
 const Page = (props: any) => {
+  const userPermissions = useAppSelector(
+    (state) => state.user.userInfo.role.permissions
+  );
   const { searchParams, router, pathname } = props;
   const [modalIsOpen, setIsOpen] = useState(false);
   const [roles, setRoles] = useState<IRole[]>([]);
@@ -236,13 +240,15 @@ const Page = (props: any) => {
     <Container>
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2>Quản lý vai trò</h2>
-        <Button
-          variant="outline-success"
-          className="center gap-2"
-          aria-hidden="false"
-          onClick={openModal}>
-          <CiCirclePlus size={20} /> <span>Thêm mới</span>
-        </Button>
+        {userPermissions.includes("roles_create") && (
+          <Button
+            variant="outline-success"
+            className="center gap-2"
+            aria-hidden="false"
+            onClick={openModal}>
+            <CiCirclePlus size={20} /> <span>Thêm mới</span>
+          </Button>
+        )}
       </div>
       <Tabs
         defaultActiveKey="search"
@@ -333,18 +339,22 @@ const Page = (props: any) => {
                 <td>{moment(role.updatedAt).format("DD-MM-YYYY")}</td>
                 <td>
                   <div className="d-flex gap-2">
-                    <Button
-                      variant="outline-warning"
-                      className="center"
-                      onClick={() => updateRole(role._id)}>
-                      <TiEdit />
-                    </Button>
-                    <Button
-                      variant="outline-danger"
-                      className="center"
-                      onClick={() => deleteRole(role._id)}>
-                      <TfiTrash />
-                    </Button>
+                    {userPermissions.includes("roles_update") && (
+                      <Button
+                        variant="outline-warning"
+                        className="center"
+                        onClick={() => updateRole(role._id)}>
+                        <TiEdit />
+                      </Button>
+                    )}
+                    {userPermissions.includes("roles_delete") && (
+                      <Button
+                        variant="outline-danger"
+                        className="center"
+                        onClick={() => deleteRole(role._id)}>
+                        <TfiTrash />
+                      </Button>
+                    )}
                   </div>
                 </td>
               </tr>

@@ -1,4 +1,5 @@
 "use client";
+import Loading from "@/components/Loading/Loading";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
@@ -9,7 +10,11 @@ const Page = () => {
     router.push("/admin/dashboard");
   }, [router]);
 
-  return null;
+  return (
+    <div className="position-fixed top-0 start-0 bottom-0 end-0 bg-light">
+      <Loading />
+    </div>
+  );
 };
 
 export default Page;

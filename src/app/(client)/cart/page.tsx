@@ -11,6 +11,7 @@ import { updateCart } from "@/lib/features/user/userThunk";
 import { useAppSelector } from "@/lib/hooks";
 import CartsService from "@/services/carts";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import React, { useEffect } from "react";
 import { Button, Container, Form, InputGroup, Table } from "react-bootstrap";
 import { TfiTrash } from "react-icons/tfi";
@@ -19,12 +20,17 @@ import Swal from "sweetalert2";
 
 const Page = () => {
   const dispatch = useDispatch();
-  const products = useAppSelector((state) => state.user.userInfo.cart.products);
-  const totalPrice = products.reduce(
+  const router = useRouter();
+  const productsInCart =
+    useAppSelector((state) => state.user.userInfo?.cart.products) || [];
+  const selectedIds = useAppSelector((state) => state.user.selectedIds);
+  const productsOrder = productsInCart.filter((product) =>
+    selectedIds.includes(product._id)
+  );
+  const totalPrice = productsOrder.reduce(
     (sum, product) => sum + product.discountedPrice * product.quantity,
     0
   );
-  const selectedIds = useAppSelector((state) => state.user.selectedIds);
   const cartId: string = getCookie("cartId");
 
   useEffect(() => {
@@ -102,6 +108,15 @@ const Page = () => {
     }
   };
 
+  const handleOrder = () => {
+    const productOrders = productsInCart.filter((product: TProductInCart) =>
+      selectedIds.includes(product._id)
+    );
+    if (productOrders.length > 0) {
+      router.push("/order");
+    }
+  };
+
   return (
     <div className="bg-body-secondary">
       <Container>
@@ -114,7 +129,7 @@ const Page = () => {
                   type={"checkbox"}
                   checked={
                     selectedIds.length > 0 &&
-                    selectedIds.length === products.length
+                    selectedIds.length === productsInCart.length
                   }
                   onChange={() => dispatch(seletedIdsChangedAll())}
                 />
@@ -128,8 +143,8 @@ const Page = () => {
             </tr>
           </thead>
           <tbody>
-            {products.length ? (
-              products.map((product: TProductInCart) => (
+            {productsInCart.length ? (
+              productsInCart.map((product: TProductInCart) => (
                 <tr key={product._id}>
                   <td>
                     <Form.Check
@@ -203,9 +218,14 @@ const Page = () => {
           </tbody>
         </Table>
         <div className="mb-5 d-flex justify-content-between align-items-center">
-          <Button variant="danger" onClick={handleDeletedSelectedIds}>
-            Xoá
-          </Button>
+          <div>
+            <Button variant="danger" onClick={handleDeletedSelectedIds}>
+              Xoá ({selectedIds.length})
+            </Button>
+            <Button variant="success" onClick={handleOrder}>
+              Đặt hàng
+            </Button>
+          </div>
           <div className="">{priceFormat(totalPrice)}</div>
         </div>
       </Container>

@@ -28,6 +28,13 @@ const AccountsService = {
   }): Promise<IResponse<IUser>> => {
     return axios.post("/accounts/feature", { ids, feature });
   },
+
+  updatePassword: (
+    userId: string,
+    data: IPasswordInputs
+  ): Promise<IResponse<null>> => {
+    return axios.patch("/accounts/update-password/" + userId, data);
+  },
 };
 
 export default AccountsService;

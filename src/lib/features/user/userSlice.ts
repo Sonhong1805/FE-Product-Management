@@ -46,21 +46,29 @@ export const userSlice = createSlice({
       state.isAuthenticated = true;
       state.isLoading = false;
       state.userInfo = action.payload;
-      const cart = action.payload.cart as ICart;
-      state.selectedIds = cart?.products
+      const cart = (action.payload.cart as ICart) || [];
+      const productsInCart = cart.products || [];
+      state.selectedIds = productsInCart
         .filter((product) => product.selected)
         .map((product) => product._id);
     },
     logout: (state) => {
       state.isAuthenticated = false;
+      state.userInfo = initialState.userInfo;
     },
     deleteProductInCart: (state, action) => {
       const id = action.payload;
-      const productsInCart = state.userInfo.cart?.products;
+      const productsInCart = state.userInfo.cart.products;
       const index = productsInCart.findIndex((product) => product._id === id);
       if (index !== -1) {
         productsInCart.splice(index, 1);
       }
+    },
+    deleteProductsInCart: (state, action) => {
+      const ids = action.payload as string[];
+      state.userInfo.cart.products = state.userInfo.cart.products.filter(
+        (product) => !ids.includes(product._id)
+      );
     },
     selectedIdsChanged: (state, action) => {
       const index = state.selectedIds.findIndex((id) => id === action.payload);
@@ -71,7 +79,7 @@ export const userSlice = createSlice({
       }
     },
     seletedIdsChangedAll: (state) => {
-      const productsInCart = state.userInfo.cart?.products;
+      const productsInCart = state.userInfo.cart.products;
       if (state.selectedIds.length === productsInCart.length) {
         state.selectedIds = [];
       } else {
@@ -79,13 +87,15 @@ export const userSlice = createSlice({
       }
     },
     selectedIdsDeleted: (state, action) => {
-      const selectedIds = action.payload;
-      state.selectedIds = state.selectedIds.filter(
-        (id) => !selectedIds.includes(id)
-      );
-      state.userInfo.cart.products = state.userInfo.cart.products.filter(
-        (product) => !selectedIds.includes(product._id)
-      );
+      if (state.userInfo) {
+        const selectedIds = action.payload;
+        state.selectedIds = state.selectedIds.filter(
+          (id) => !selectedIds.includes(id)
+        );
+        state.userInfo.cart.products = state.userInfo.cart.products.filter(
+          (product) => !selectedIds.includes(product._id)
+        );
+      }
     },
     addToWishlist: (state, action) => {
       const newItem = action.payload;
@@ -103,8 +113,8 @@ export const userSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder.addCase(createCart.fulfilled, (state, action) => {
-      state.userInfo.cart = (action.payload?.data as ICart) || {};
-      const cartId = action.payload?.data?._id as string;
+      state.userInfo.cart = action.payload.data as ICart;
+      const cartId = action.payload.data?._id as string;
       setCookie("cartId", cartId);
     });
     builder.addCase(updateCart.fulfilled, (state, action) => {
@@ -127,6 +137,7 @@ export const {
   saveUserInfo,
   logout,
   deleteProductInCart,
+  deleteProductsInCart,
   selectedIdsChanged,
   seletedIdsChangedAll,
   selectedIdsDeleted,

@@ -63,7 +63,7 @@ const Page = () => {
         </Form.Group>
         <Form.Group className="mb-3 d-flex justify-content-between">
           <Link
-            href={"/forgot-password"}
+            href={"/password/forgot"}
             className="link-primary link-offset-2 link-underline-opacity-25 link-underline-opacity-100-hover">
             Quên mật khẩu ?
           </Link>

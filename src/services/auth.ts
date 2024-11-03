@@ -17,6 +17,18 @@ const AuthService = {
   account: () => {
     return axios.get("/auth/account");
   },
+  forgotPassword: (email: string): Promise<IResponse<null>> => {
+    return axios.post("/auth/forgot-password", { email });
+  },
+  otpPassword: (email: string, otp: string): Promise<IResponse<null>> => {
+    return axios.post("/auth/otp-password", { email, otp });
+  },
+  resetPassword: (
+    email: string,
+    password: string
+  ): Promise<IResponse<null>> => {
+    return axios.post("/auth/reset-password", { email, password });
+  },
 };
 
 export default AuthService;

@@ -1,12 +1,24 @@
 "use client";
+
 import { convertFileList } from "@/helpers/convertFileList";
-import { highlightsOptions } from "@/options/hightlights";
+import { convertSlug } from "@/helpers/convertSlug";
+import withBase from "@/hocs/withBase";
+import { colorsOptions } from "@/options/colors";
+import { labelsOptions } from "@/options/labels";
+import { tagsOptions } from "@/options/tags";
 import CategoriesService from "@/services/categories";
 import ProductsService from "@/services/products";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
-import React, { useEffect, useState } from "react";
+import React, {
+  ChangeEvent,
+  Dispatch,
+  SetStateAction,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { Button, Container, Form } from "react-bootstrap";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { BiExit } from "react-icons/bi";
@@ -14,20 +26,88 @@ import { IoIosCloseCircleOutline } from "react-icons/io";
 import Select, { ActionMeta, MultiValue, SingleValue } from "react-select";
 import makeAnimated from "react-select/animated";
 import Swal from "sweetalert2";
+import { colourStyles } from "@/constants/colourStyles";
 const animatedComponents = makeAnimated();
 const Editor = dynamic(() => import("@/components/Editor/Editor"), {
   ssr: false,
   loading: () => <p>Loading...</p>,
 });
+import "../style.scss";
+import { FiEye } from "react-icons/fi";
+import Viewer from "viewerjs";
 
-const Page = () => {
-  const router = useRouter();
-  const searchParams = useSearchParams();
+const Page = (props: IWithBaseProps) => {
+  const { router, searchParams } = props;
   const [categoryOptions, setCategoryOptions] = useState<Option[]>([]);
   const [thumbnailPreview, setThumbnailPreview] = useState("");
   const [imagesPreview, setImagesPreview] = useState<string[]>([]);
-  const [defaultHighlights, setDefaultHighlights] = useState<Option[]>([]);
+  const [defaultTags, setDefaultTags] = useState<Option[] | null>([
+    tagsOptions[0],
+    tagsOptions[1],
+  ]);
+  const [defaultColors, setDefaultColors] = useState<Option[] | null>([
+    colorsOptions[0],
+    colorsOptions[1],
+  ]);
   const [defaultCategory, setDefaultCategory] = useState<Option>();
+  const [defaultLabel, setDefaultLabel] = useState<Option>();
+  const [previewSlug, setPreviewSlug] = useState("");
+
+  const thumbnailRef = useRef<HTMLDivElement | null>(null);
+  const galleryRef = useRef<HTMLDivElement | null>(null);
+
+  const viewerInstanceRef = useRef<Viewer | null>(null);
+
+  useEffect(() => {
+    let Viewer;
+    import("viewerjs").then((module) => {
+      Viewer = module.default;
+
+      if (thumbnailRef.current) {
+        viewerInstanceRef.current = new Viewer(thumbnailRef.current, {
+          // Thêm các tùy chọn cho ảnh đơn nếu cần
+        });
+      }
+
+      if (galleryRef.current) {
+        viewerInstanceRef.current = new Viewer(galleryRef.current, {});
+      }
+    });
+
+    return () => {
+      if (viewerInstanceRef.current) viewerInstanceRef.current.destroy();
+    };
+  }, [imagesPreview]);
+
+  const openGallery = async (index: number) => {
+    if (viewerInstanceRef.current) {
+      viewerInstanceRef.current.destroy();
+    }
+
+    const { default: Viewer } = await import("viewerjs");
+    viewerInstanceRef.current = new Viewer(
+      galleryRef.current as HTMLDivElement,
+      {
+        initialViewIndex: index,
+      }
+    );
+
+    viewerInstanceRef.current.show();
+  };
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      const response = await CategoriesService.index();
+      if (response.success && response.data) {
+        const options = response.data.map((category) => ({
+          value: category._id,
+          label: category.title,
+        }));
+        setCategoryOptions(options);
+      }
+    };
+    fetchCategories();
+  }, []);
 
   useEffect(() => {
     const fetchProductDetail = async () => {
@@ -45,7 +125,10 @@ const Page = () => {
           discount,
           descriptions,
           quantity,
-          highlights,
+          tags,
+          label,
+          description,
+          colors,
         } = response.data as IProductInputs;
         setValue("_id", _id);
         setValue("title", title);
@@ -53,40 +136,38 @@ const Page = () => {
           value: category?.slug || "",
           label: category?.title || "",
         };
+        const labelOption: Option = {
+          label: label?.label || "",
+          value: label?.value || "",
+        };
 
         setDefaultCategory(categoryOption || { value: "", label: "" });
+        setDefaultLabel(labelOption || { value: "", label: "" });
         setValue("category", (category?._id as any) || "");
+        setValue("label", label);
         setValue("thumbnail", thumbnail);
+        setValue("description", description);
         setValue("images", images);
         setValue("price", price);
         setValue("discount", discount);
         setValue("quantity", quantity);
-        setDefaultHighlights(highlights);
-        setValue(
-          "highlights",
-          highlights.length > 0
-            ? highlights
-            : [highlightsOptions[0], highlightsOptions[1]]
-        );
         setValue("descriptions", descriptions);
+        setDefaultTags(tags);
+        setValue(
+          "tags",
+          tags && tags.length > 0 ? tags : [tagsOptions[0], tagsOptions[1]]
+        );
+        setDefaultColors(colors);
+        setValue(
+          "colors",
+          colors && colors.length > 0
+            ? colors
+            : [colorsOptions[0], colorsOptions[1]]
+        );
       }
     };
     fetchProductDetail();
   }, [searchParams]);
-
-  useEffect(() => {
-    const fetchCategories = async () => {
-      const response = await CategoriesService.index();
-      if (response.success && response.data) {
-        const options = response.data.map((category) => ({
-          value: category.slug,
-          label: category.title,
-        }));
-        setCategoryOptions(options);
-      }
-    };
-    fetchCategories();
-  }, []);
 
   const {
     register,
@@ -97,12 +178,14 @@ const Page = () => {
     formState: { errors },
   } = useForm<IProductInputs>({
     defaultValues: {
-      highlights: [highlightsOptions[0], highlightsOptions[1]],
+      tags: [tagsOptions[0], tagsOptions[1]],
+      colors: [colorsOptions[0], colorsOptions[1]],
     },
   });
   const onSubmit: SubmitHandler<IProductInputs> = async (
     data: IProductInputs
   ) => {
+    if (!data.slug) data.slug = previewSlug;
     const formData = new FormData();
     Object.entries(data).forEach(([key, value]) => {
       if (key === "images" && value instanceof FileList) {
@@ -112,7 +195,7 @@ const Page = () => {
       } else if (key === "thumbnail" && value instanceof FileList) {
         formData.append("thumbnail", value[0] || "");
       } else if (
-        key === "highlights" ||
+        ["tags", "colors", "label"].includes(key) ||
         (key === "images" && Array.isArray(value))
       ) {
         formData.append(key, JSON.stringify(value));
@@ -147,7 +230,15 @@ const Page = () => {
     }
   };
 
-  const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  useEffect(() => {
+    if (watch("title")) {
+      setPreviewSlug(convertSlug(convertSlug(watch("title"))));
+    } else {
+      setPreviewSlug("");
+    }
+  }, [watch("title")]);
+
+  const handleThumbnailChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const previewUrl = URL.createObjectURL(file);
@@ -155,7 +246,7 @@ const Page = () => {
     }
   };
 
-  const handleImagesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImagesChange = (e: ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
       const previewUrls = Array.from(files).map((file) =>
@@ -186,15 +277,30 @@ const Page = () => {
     setImagesPreview(updatedPreviews);
   };
 
-  const getHighlightOptions = (
+  const getValueMultiOptions = (
     newValue: MultiValue<Option>,
-    actionMeta: ActionMeta<Option>
+    value: keyof IProductInputs,
+    setDefaultValue: Dispatch<SetStateAction<Option[] | null>>
   ) => {
     const selectedOptions: Option[] = newValue.map((option) => ({
       ...option,
     }));
-    setValue("highlights", selectedOptions);
-    setDefaultHighlights(selectedOptions);
+    if (selectedOptions.length === 0) {
+      setValue(value, null);
+      setDefaultValue([]);
+    } else {
+      setValue(value, selectedOptions);
+      setDefaultValue(selectedOptions);
+    }
+  };
+
+  const handleValueSelectChange = (
+    newValue: MultiValue<Option>,
+    value: keyof IProductInputs,
+    setDefaultValue: Dispatch<SetStateAction<Option[] | null>>
+  ) => {
+    getValueMultiOptions(newValue, value, setDefaultValue);
+    setDefaultValue(Array.from(newValue));
   };
 
   const getCategoryOptions = (
@@ -209,6 +315,19 @@ const Page = () => {
       setDefaultCategory({ value: "", label: "" });
     }
   };
+  const getLabelOptions = (
+    newValue: SingleValue<Option> | MultiValue<Option> | null,
+    actionMeta: ActionMeta<Option>
+  ) => {
+    if (newValue && !Array.isArray(newValue)) {
+      setValue("label", newValue as Option as any);
+      setDefaultLabel(newValue as Option);
+    } else {
+      setValue("label", { value: "", label: "" } as any);
+      setDefaultLabel({ value: "", label: "" });
+    }
+  };
+
   const getValueDescription = (html: string) => setValue("descriptions", html);
 
   return (
@@ -237,33 +356,64 @@ const Page = () => {
               )}
             </Form.Group>
             <Form.Group className="mb-3" controlId="exampleForm.ControlInput1">
-              <Form.Label>Danh mục</Form.Label>
-              <Select
-                closeMenuOnSelect={true}
-                components={animatedComponents}
-                placeholder="-- Chọn danh mục cho sản phẩm --"
-                value={defaultCategory?.value ? defaultCategory : null}
-                isClearable={true}
-                isSearchable={true}
-                options={categoryOptions}
-                onChange={getCategoryOptions}
+              <Form.Label>Mô tả ngắn sản phẩm (for SEO)</Form.Label>
+              <Form.Control
+                placeholder="Nhập mô tả ngắn cho sản phẩm"
+                {...register("description", { required: true })}
               />
+              {errors.description && (
+                <span className="text-danger">
+                  Vui lòng nhập mô tả ngắn cho sản phẩm
+                </span>
+              )}
             </Form.Group>
             <div className="d-flex mb-3 gap-3 flex-wrap">
               <Form.Group
                 className="flex-fill"
                 controlId="exampleForm.ControlInput1">
-                <Form.Label>Giá (VNĐ)</Form.Label>
-                <Form.Control
-                  type="number"
-                  defaultValue={0}
-                  min={0}
-                  placeholder="Nhập giá sản phẩm"
-                  {...register("price", {
-                    valueAsNumber: true,
-                  })}
+                <Form.Label>Danh mục</Form.Label>
+                <Select
+                  closeMenuOnSelect={true}
+                  components={animatedComponents}
+                  placeholder="-- Chọn danh mục sản phẩm --"
+                  value={defaultCategory?.value ? defaultCategory : null}
+                  isClearable={true}
+                  isSearchable={true}
+                  options={categoryOptions}
+                  onChange={getCategoryOptions}
                 />
               </Form.Group>
+              <Form.Group
+                className="flex-fill"
+                controlId="exampleForm.ControlInput1">
+                <Form.Label>Nhãn</Form.Label>
+                <Select
+                  closeMenuOnSelect={true}
+                  components={animatedComponents}
+                  placeholder="-- Chọn nhãn sản phẩm --"
+                  value={defaultLabel?.value ? defaultLabel : null}
+                  isClearable={true}
+                  isSearchable={true}
+                  options={labelsOptions}
+                  onChange={getLabelOptions}
+                />
+              </Form.Group>
+            </div>
+            <Form.Group
+              className="flex-fill mb-3"
+              controlId="exampleForm.ControlInput1">
+              <Form.Label>Giá (VNĐ)</Form.Label>
+              <Form.Control
+                type="number"
+                defaultValue={0}
+                min={0}
+                placeholder="Nhập giá sản phẩm"
+                {...register("price", {
+                  valueAsNumber: true,
+                })}
+              />
+            </Form.Group>
+            <div className="d-flex mb-3 gap-3 flex-wrap">
               <Form.Group
                 className="flex-fill"
                 controlId="exampleForm.ControlInput1">
@@ -294,35 +444,66 @@ const Page = () => {
               </Form.Group>
             </div>
             <Form.Group className="mb-3" controlId="exampleForm.ControlInput1">
-              <Form.Label>Highlights</Form.Label>
+              <Form.Label>Màu sắc sản phẩm</Form.Label>
               <Select
                 closeMenuOnSelect={false}
                 components={animatedComponents}
-                placeholder="-- Chọn highlight cho sản phẩm --"
+                placeholder="-- Chọn màu sắc cho sản phẩm --"
                 value={
-                  defaultHighlights.length > 0
-                    ? defaultHighlights
-                    : [highlightsOptions[0], highlightsOptions[1]]
+                  defaultColors && defaultColors.length > 0
+                    ? defaultColors
+                    : null
                 }
                 isMulti
-                options={highlightsOptions}
-                onChange={getHighlightOptions}
+                options={colorsOptions}
+                onChange={(newValue) =>
+                  handleValueSelectChange(newValue, "colors", setDefaultColors)
+                }
+                styles={colourStyles}
+              />
+            </Form.Group>
+            <Form.Group className="mb-3" controlId="exampleForm.ControlInput1">
+              <Form.Label>Từ khoá phổ biến</Form.Label>
+              <Select
+                closeMenuOnSelect={false}
+                components={animatedComponents}
+                placeholder="-- Chọn tag cho sản phẩm --"
+                value={
+                  defaultTags && defaultTags.length > 0 ? defaultTags : null
+                }
+                isMulti
+                options={tagsOptions}
+                onChange={(newValue) =>
+                  handleValueSelectChange(newValue, "tags", setDefaultTags)
+                }
               />
             </Form.Group>
           </div>
-          <div className="w-50 text-center">
-            <Image
-              src={
-                watch("_id") && watch("thumbnail")
-                  ? thumbnailPreview || getValues("thumbnail") + ""
-                  : thumbnailPreview || "/image/no-image.png"
-              }
-              width={257}
-              height={257}
-              alt="thumbnail"
-              priority={true}
-              style={{ objectFit: "contain" }}
-            />
+          <div className="w-50">
+            <Form.Group className="mb-3" controlId="exampleForm.ControlInput1">
+              <Form.Label>Slug sản phẩm</Form.Label>
+              <Form.Control
+                placeholder={
+                  previewSlug ||
+                  "Slug sản phẩm sẽ hiển thị ở đây hoặc thay đổi trực tiếp"
+                }
+                {...register("slug")}
+              />
+            </Form.Group>
+            <div ref={thumbnailRef}>
+              <Image
+                src={
+                  watch("_id") && watch("thumbnail")
+                    ? thumbnailPreview || getValues("thumbnail") + ""
+                    : thumbnailPreview || "/image/no-image.png"
+                }
+                width={257}
+                height={257}
+                alt="thumbnail"
+                priority={true}
+                style={{ objectFit: "contain" }}
+              />
+            </div>
 
             <Form.Group controlId="formFile" className="mb-3">
               <Form.Label>Thêm ảnh</Form.Label>
@@ -332,6 +513,7 @@ const Page = () => {
                 onChange={handleThumbnailChange}
               />
             </Form.Group>
+
             <Form.Group controlId="formFileMultiple" className="mb-3">
               <Form.Label>Thêm bộ ảnh (tối đa 10 ảnh)</Form.Label>
               <Form.Control
@@ -343,21 +525,28 @@ const Page = () => {
             </Form.Group>
           </div>
         </div>
-        <div className="d-flex gap-3 flex-wrap mb-3">
+        <div className="d-flex gap-3 flex-wrap mb-3" ref={galleryRef}>
           {(watch("_id") && imagesPreview.length > 0
             ? imagesPreview
             : watch("_id")
             ? Array.from(getValues("images") as string[])
             : imagesPreview
           ).map((image: string | File, index: number) => (
-            <div className="position-relative" key={index}>
-              <IoIosCloseCircleOutline
-                size={24}
-                cursor={"pointer"}
-                style={{ top: "-10px", right: "-10px" }}
-                className="position-absolute text-danger"
-                onClick={() => removeImagesPreview(index)}
-              />
+            <div className="gallery" key={index}>
+              <div className="gallery-icons">
+                <FiEye
+                  color="#FFFFFF"
+                  size={24}
+                  cursor={"pointer"}
+                  onClick={() => openGallery(index)}
+                />
+                <IoIosCloseCircleOutline
+                  color="#FFFFFF"
+                  size={24}
+                  cursor={"pointer"}
+                  onClick={() => removeImagesPreview(index)}
+                />
+              </div>
               <Image
                 src={image as string}
                 width={200}
@@ -400,4 +589,4 @@ const Page = () => {
   );
 };
 
-export default Page;
+export default withBase(Page);

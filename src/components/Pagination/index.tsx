@@ -1,19 +1,26 @@
-import { handlePagination } from "@/lib/features/product/productSlice";
+import withBase from "@/hocs/withBase";
+import { ActionCreatorWithPayload } from "@reduxjs/toolkit";
 import React from "react";
 import { Pagination as PaginationBootstrap } from "react-bootstrap";
-const PaginationClient = (props: any) => {
-  const { pagination, dispatch } = props;
+
+interface IProps extends IWithBaseProps {
+  pagination: IPagination;
+  onHandlePagination: ActionCreatorWithPayload<any, any>;
+}
+
+const Pagination = (props: IProps) => {
+  const { pagination, dispatch, onHandlePagination } = props;
   return (
     <PaginationBootstrap>
       <PaginationBootstrap.First
         disabled={pagination.page === 1}
-        onClick={() => dispatch(handlePagination({ ...pagination, page: 1 }))}
+        onClick={() => dispatch(onHandlePagination({ ...pagination, page: 1 }))}
       />
       <PaginationBootstrap.Prev
         disabled={pagination.page === 1}
         onClick={() =>
           dispatch(
-            handlePagination({ ...pagination, page: pagination.page - 1 })
+            onHandlePagination({ ...pagination, page: pagination.page - 1 })
           )
         }
       />
@@ -23,7 +30,7 @@ const PaginationClient = (props: any) => {
             key={index}
             active={index + 1 === pagination.page}
             onClick={() =>
-              dispatch(handlePagination({ ...pagination, page: index + 1 }))
+              dispatch(onHandlePagination({ ...pagination, page: index + 1 }))
             }>
             {index + 1}
           </PaginationBootstrap.Item>
@@ -33,7 +40,7 @@ const PaginationClient = (props: any) => {
         disabled={pagination.page === pagination.totalPages}
         onClick={() =>
           dispatch(
-            handlePagination({ ...pagination, page: pagination.page + 1 })
+            onHandlePagination({ ...pagination, page: pagination.page + 1 })
           )
         }
       />
@@ -41,7 +48,7 @@ const PaginationClient = (props: any) => {
         disabled={pagination.page === pagination.totalPages}
         onClick={() =>
           dispatch(
-            handlePagination({
+            onHandlePagination({
               ...pagination,
               page: pagination.totalPages as number,
             })
@@ -52,4 +59,4 @@ const PaginationClient = (props: any) => {
   );
 };
 
-export default PaginationClient;
+export default withBase(Pagination);

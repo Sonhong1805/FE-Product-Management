@@ -15,9 +15,19 @@ interface IUser {
 }
 
 type IAccountsInputs = Omit<IUser, "status" | "updatedAt">;
+type IAccountInputs = Pick<
+  IUser,
+  "fullname" | "email" | "phone" | "address" | "avatar" | "gender"
+>;
 
 interface IAccountsSearch {
   keywords: string;
   role: Option | null;
   filter: Option | null;
+}
+
+interface IPasswordInputs {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
 }

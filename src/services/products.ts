@@ -19,8 +19,8 @@ const ProductsService = {
   update: (id: string, data: FormData): Promise<IResponse<IProduct>> => {
     return axios.patch(`/products/${id}`, data);
   },
-  delete: (id: string): Promise<IResponse<IProduct>> => {
-    return axios.delete("/products/" + id);
+  delete: (cid: string, pid: string): Promise<IResponse<IProduct>> => {
+    return axios.delete(`/products/${cid}/${pid}`);
   },
   changeFeature: ({
     ids,

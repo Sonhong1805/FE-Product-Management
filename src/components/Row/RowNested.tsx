@@ -1,4 +1,5 @@
 "use client";
+import { useAppSelector } from "@/lib/hooks";
 import moment from "moment";
 import { Fragment } from "react";
 import { Badge, Button, Form } from "react-bootstrap";
@@ -20,6 +21,9 @@ const RowNested = ({
   selectedIds: (string | number)[];
   setSelectedIds: React.Dispatch<React.SetStateAction<(string | number)[]>>;
 }) => {
+  const userPermissions = useAppSelector(
+    (state) => state.user.userInfo.role.permissions
+  );
   const handleSelectedIds = (id: string) => {
     setSelectedIds((prev) => {
       if (prev.includes(id)) {
@@ -57,18 +61,22 @@ const RowNested = ({
                 </td>
                 <td>{moment(category.updatedAt).format("DD-MM-YYYY")}</td>
                 <td className="d-flex gap-2">
-                  <Button
-                    variant="outline-warning"
-                    className="center"
-                    onClick={() => onUpdateCategory(category._id)}>
-                    <TiEdit />
-                  </Button>
-                  <Button
-                    variant="outline-danger"
-                    className="center"
-                    onClick={() => onDeleteCategory(category._id)}>
-                    <TfiTrash />
-                  </Button>
+                  {userPermissions.includes("categories_update") && (
+                    <Button
+                      variant="outline-warning"
+                      className="center"
+                      onClick={() => onUpdateCategory(category._id)}>
+                      <TiEdit />
+                    </Button>
+                  )}
+                  {userPermissions.includes("categories_delete") && (
+                    <Button
+                      variant="outline-danger"
+                      className="center"
+                      onClick={() => onDeleteCategory(category._id)}>
+                      <TfiTrash />
+                    </Button>
+                  )}
                 </td>
               </tr>
               {category.children && category.children.length > 0 && (
