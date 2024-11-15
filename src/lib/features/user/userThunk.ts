@@ -24,12 +24,14 @@ export const updateCart = createAsyncThunk(
     cartId,
     _id,
     type,
+    quantity,
   }: {
     cartId: string;
     _id: string;
-    type: "plus" | "minus";
+    type: "plus" | "minus" | "input";
+    quantity: number;
   }) => {
-    const response = await CartsService.update({ cartId, _id, type });
+    const response = await CartsService.update({ cartId, _id, type, quantity });
     return response;
   }
 );

@@ -8,7 +8,7 @@ import useWindowSize from "react-use/lib/useWindowSize";
 import Confetti from "react-confetti";
 
 const Page = () => {
-  const orderInfo = useAppSelector((state) => state.order.orderInfo);
+  const orderInfo = useAppSelector((state) => state.orders.orderInfo);
   const { width, height } = useWindowSize();
 
   return (

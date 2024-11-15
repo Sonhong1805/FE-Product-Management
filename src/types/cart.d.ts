@@ -4,6 +4,7 @@ type TProductInCart = Pick<
 > & {
   _id: string;
   quantity: number;
+  maxQuantity: number;
   variant: string;
   selected: boolean;
   productId: string;

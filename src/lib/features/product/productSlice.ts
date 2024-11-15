@@ -131,6 +131,9 @@ export const productSlice = createSlice({
         label: "",
       };
     },
+    saveSelectedIds: (state, action) => {
+      state.selectedIds = action.payload;
+    },
     selectedIdsChanged: (state, action) => {
       const index = state.selectedIds.findIndex((id) => id === action.payload);
       if (index !== -1) {
@@ -170,11 +173,11 @@ export const productSlice = createSlice({
     },
     deletedProduct: (state, action) => {
       const products = state.data;
-      const index = products.findIndex(
-        (product) => product._id === action.payload
-      );
+      const id = action.payload;
+      const index = products.findIndex((product) => product._id === id);
       if (index !== -1) {
         products.splice(index, 1);
+        state.selectedIds = state.selectedIds.filter((item) => item !== id);
         state.pagination.totalItems = state.pagination.totalItems - 1;
         if (products.length === 0) {
           state.pagination.page = 1;
@@ -208,6 +211,7 @@ export const {
   resetQueries,
   handleCategoriesSlug,
   changeView,
+  saveSelectedIds,
 } = productSlice.actions;
 
 export default productSlice.reducer;

@@ -21,7 +21,11 @@ interface TWishlist {
 
 interface IRating {
   _id: string;
-  email: string;
+  user: {
+    _id: string;
+    fullname: string;
+    avatar: string;
+  };
   star: number;
   content: string;
   createdAt: Date;

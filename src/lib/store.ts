@@ -5,6 +5,8 @@ import categoryReducer from "../lib/features/category/categorySlice";
 import productReducer from "../lib/features/product/productSlice";
 import productDetailReducer from "../lib/features/productDetail/productDetailSlice";
 import orderReducer from "../lib/features/order/orderSlice";
+import blogReducer from "../lib/features/blog/blogSlice";
+import accountReducer from "../lib/features/account/accountSlice";
 
 const rootReducer = combineReducers({
   user: userReducer,
@@ -12,7 +14,9 @@ const rootReducer = combineReducers({
   categories: categoryReducer,
   products: productReducer,
   productDetail: productDetailReducer,
-  order: orderReducer,
+  orders: orderReducer,
+  blogs: blogReducer,
+  accounts: accountReducer,
 });
 
 export const makeStore = () => {

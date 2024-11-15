@@ -1,17 +1,15 @@
-"use client";
+import withBase from "@/hocs/withBase";
 import {
   addToWishlist,
   deleteWishlistItem,
 } from "@/lib/features/user/userSlice";
-import { useAppDispatch, useAppSelector } from "@/lib/hooks";
+import { useAppSelector } from "@/lib/hooks";
 import WishlistService from "@/services/wishlist";
-import { useRouter } from "next/navigation";
-import React from "react";
+import React, { memo } from "react";
 import { BsHeart, BsHeartFill } from "react-icons/bs";
 
-const Wishlist = () => {
-  const dispatch = useAppDispatch();
-  const router = useRouter();
+const Wishlist = (props: IWithBaseProps) => {
+  const { dispatch, router } = props;
   const isAuthenticated = useAppSelector((state) => state.user.isAuthenticated);
   const productDetail = useAppSelector((state) => state.productDetail.data);
   const wishlist = useAppSelector((state) => state.user.userInfo.wishlist);
@@ -54,11 +52,17 @@ const Wishlist = () => {
       size={30}
       cursor={"pointer"}
       className="text-danger"
+      style={{ minWidth: "32px" }}
       onClick={handleDeleteWishlist}
     />
   ) : (
-    <BsHeart size={30} cursor={"pointer"} onClick={handleAddToWishlist} />
+    <BsHeart
+      size={30}
+      cursor={"pointer"}
+      style={{ minWidth: "32px" }}
+      onClick={handleAddToWishlist}
+    />
   );
 };
 
-export default Wishlist;
+export default withBase(memo(Wishlist));

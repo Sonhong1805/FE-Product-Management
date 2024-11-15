@@ -10,7 +10,7 @@ interface IBlog {
 
 type IBlogInputs = Omit<IBlog, "status" | "updatedAt" | "author">;
 
-interface IBlogsSearch {
+type IBlogsQueries = {
   keywords: string;
   filter: Option | null;
-}
+};

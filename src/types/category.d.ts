@@ -8,7 +8,7 @@ interface ICategory {
   createdAt: string;
   updatedAt: string;
   slug: string;
-  children?: any;
+  children?: ICategory[];
 }
 
 interface ICategoryInputs {

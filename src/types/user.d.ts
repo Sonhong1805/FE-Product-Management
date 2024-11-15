@@ -14,20 +14,22 @@ interface IUser {
   updatedAt?: Date;
 }
 
-type IAccountsInputs = Omit<IUser, "status" | "updatedAt">;
+type IAccountsInputs = Omit<IUser, "status" | "updatedAt"> & {
+  confirmPassword?: string;
+};
 type IAccountInputs = Pick<
   IUser,
   "fullname" | "email" | "phone" | "address" | "avatar" | "gender"
 >;
 
-interface IAccountsSearch {
+interface IAccountsQueries {
   keywords: string;
   role: Option | null;
   filter: Option | null;
 }
 
 interface IPasswordInputs {
-  currentPassword: string;
+  currentPassword?: string;
   newPassword: string;
   confirmPassword: string;
 }

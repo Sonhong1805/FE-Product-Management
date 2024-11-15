@@ -24,10 +24,12 @@ const Page = () => {
   const productsInCart =
     useAppSelector((state) => state.user.userInfo?.cart.products) || [];
   const selectedIds = useAppSelector((state) => state.user.selectedIds);
+  const orderInfo = useAppSelector((state) => state.orders.orderInfo);
   const productsOrder = productsInCart.filter((product) =>
     selectedIds.includes(product._id)
   );
   const productsOrderGroups = groupItems(productsOrder);
+  const productsOrderInfoGroups = groupItems(orderInfo.products);
   const totalPrice = +productsOrder.reduce(
     (sum: number, product: TProductInCart) =>
       (sum += product.discountedPrice * product.quantity),
@@ -39,7 +41,9 @@ const Page = () => {
     handleSubmit,
     watch,
     formState: { errors },
-  } = useForm<TOrderInputs>();
+  } = useForm<TOrderInputs>({
+    defaultValues: {},
+  });
   const onSubmit: SubmitHandler<TOrderInputs> = async (data) => {
     if (!isPaid && data.method === "PAYPAL") {
       setIsPaid("ERROR");
@@ -64,7 +68,7 @@ const Page = () => {
         showConfirmButton: false,
         timer: 2000,
       });
-      router.push("/order/success");
+      // router.push("/order/success");
     }
   };
   return (
@@ -162,60 +166,64 @@ const Page = () => {
                 </Form.Group>
               )}
               <Button variant="primary" type="submit">
-                Submit
+                Thanh toán
               </Button>
             </Form>
           </Col>
           <Col xs={6}>
             <div className="w-100">
-              {productsOrderGroups.length > 0 &&
-                productsOrderGroups.map((item: IOrderGroup, index: number) => (
-                  <Card
-                    border="primary"
-                    className="w-100 mb-3"
-                    key={item.productId}>
-                    <Card.Header>
-                      Gói hàng {index + 1} của {productsOrderGroups.length}
-                    </Card.Header>
-                    <Card.Body>
-                      {item.products?.map((product: TProductInCart) => (
-                        <div
-                          key={product._id}
-                          className="d-flex justify-content-between align-items-center">
-                          <div>
-                            <Image
-                              src={
-                                product.thumbnail + "" || "/image/no-image.png"
-                              }
-                              width={50}
-                              height={50}
-                              priority
-                              alt="thumbnail"
-                            />
-                          </div>
-                          <div>
-                            <Link href={"/product/" + product.slug}>
-                              {product.title}
-                            </Link>
-                            <div>{product.variant}</div>
-                          </div>
-                          <div>
-                            <div>{priceFormat(product.price)}</div>
+              {[...productsOrderGroups, ...productsOrderInfoGroups].length >
+                0 &&
+                [...productsOrderGroups, ...productsOrderInfoGroups].map(
+                  (item: IOrderGroup, index: number) => (
+                    <Card
+                      border="danger"
+                      className="w-100 mb-3"
+                      key={item.productId}>
+                      <Card.Header>
+                        Gói hàng {index + 1} của {productsOrderGroups.length}
+                      </Card.Header>
+                      <Card.Body>
+                        {item.products?.map((product: TProductInCart) => (
+                          <div
+                            key={product._id}
+                            className="d-flex justify-content-between align-items-center">
                             <div>
-                              {priceFormat(product.discountedPrice)} x{" "}
-                              {product.quantity}
+                              <Image
+                                src={
+                                  product.thumbnail + "" ||
+                                  "/image/no-image.png"
+                                }
+                                width={50}
+                                height={50}
+                                priority
+                                alt="thumbnail"
+                              />
+                            </div>
+                            <div>
+                              <Link href={"/product/" + product.slug}>
+                                {product.title}
+                              </Link>
+                              <div>{product.variant}</div>
+                            </div>
+                            <div>
+                              <div>{priceFormat(product.price)}</div>
+                              <div>
+                                {priceFormat(product.discountedPrice)} x{" "}
+                                {product.quantity}
+                              </div>
+                            </div>
+                            <div>
+                              {priceFormat(
+                                product.discountedPrice * product.quantity
+                              )}
                             </div>
                           </div>
-                          <div>
-                            {priceFormat(
-                              product.discountedPrice * product.quantity
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </Card.Body>
-                  </Card>
-                ))}
+                        ))}
+                      </Card.Body>
+                    </Card>
+                  )
+                )}
               <div className="d-flex justify-content-between align-items-center">
                 <Button>Trở về cửa hàng</Button>
                 <span>{priceFormat(totalPrice)}</span>

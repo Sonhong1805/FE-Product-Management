@@ -1,15 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit";
 import { fetchOrders } from "./orderThunk";
 
-interface IInitialState {
-  isLoading: boolean;
-  data: IOrder[];
-  pagination: IPagination;
-  selectedIds: string[];
-  queries: IOrderQueries;
-  orderInfo: IOrder;
-}
-
 const getId =
   typeof window !== "undefined"
     ? new URLSearchParams(window.location.search).get("id")
@@ -36,6 +27,15 @@ const getOrderFilterValue =
 const storageParamsKey = getOrderFilterValue
   ? getOrderFilterValue.split(",")[0]
   : "";
+
+interface IInitialState {
+  isLoading: boolean;
+  data: IOrder[];
+  pagination: IPagination;
+  selectedIds: string[];
+  queries: IOrderQueries;
+  orderInfo: IOrder;
+}
 
 const getFilter =
   typeof window !== "undefined"
@@ -119,6 +119,7 @@ export const orderSlice = createSlice({
       const index = state.data.findIndex((order) => order._id === id);
       if (index !== -1) {
         state.data.splice(index, 1);
+        state.selectedIds = state.selectedIds.filter((item) => item !== id);
       }
     },
     selectedIdsChanged: (state, action) => {

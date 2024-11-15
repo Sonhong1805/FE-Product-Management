@@ -24,56 +24,118 @@ import Swal from "sweetalert2";
 import { MdPassword } from "react-icons/md";
 import { useAppSelector } from "@/lib/hooks";
 import Pagination from "@/components/Pagination";
+import {
+  deletedAccount,
+  handlePagination,
+  handleQueries,
+  selectedIdsChanged,
+  seletedIdsChangedAll,
+  updateFeature,
+} from "@/lib/features/account/accountSlice";
+import { fetchAccounts } from "@/lib/features/account/accountThunk";
+import Loading from "@/components/Loading/Loading";
 
-const Page = (props: any) => {
+const Page = (props: IWithBaseProps) => {
   const userPermissions = useAppSelector(
     (state) => state.user.userInfo.role.permissions
   );
   const userId = useAppSelector((state) => state.user.userInfo._id);
-  const { router, pathname, searchParams, rangeCount } = props;
-  const [selectedIds, setSelectedIds] = useState<(string | number)[]>([]);
-  const [accounts, setAccounts] = useState<IUser[]>([]);
+  const { router, pathname, searchParams, rangeCount, dispatch } = props;
   const [selectedFeatured, setSelectedFeatured] = useState<Option | null>(null);
   const [roleOptions, setRoleOptions] = useState<Option[]>([]);
-  const [pagination, setPagination] = useState<IPagination>({
-    limit: 5,
-    page: 1,
-    totalItems: 0,
-    totalPages: 0,
-  });
-  const [search, setSearch] = useState<IAccountsSearch>({
-    keywords: searchParams.get("fullname") || "",
-    role: {
-      label: searchParams.get("role") || "",
-      value: localStorage.getItem("roleValue") || "",
-    },
-    filter: {
-      label: searchParams.get("status") || "",
-      value: localStorage.getItem("statusValue") || "",
-    },
-  });
+  const accounts = useAppSelector((state) => state.accounts.data);
+  const pagination = useAppSelector((state) => state.accounts.pagination);
+  const selectedIds = useAppSelector((state) => state.products.selectedIds);
+  const queries = useAppSelector((state) => state.accounts.queries);
+  const [loading, setLoading] = useState<boolean>(false);
 
-  const fetchAccounts = async () => {
-    const response = await AccountsService.index({
-      page: pagination.page,
-      limit: pagination.limit,
-      ...(search.keywords && { fullname: search.keywords }),
-      ...(search.filter && search.filter.value
-        ? {
-            [search.filter?.value?.split(",")[0]]:
-              search.filter?.value?.split(",")[1],
-          }
-        : {}),
-      ...(search.role &&
-        search.role.value && {
-          role: search.role.value,
-        }),
-    });
-    if (response?.success && response?.data && response?.pagination) {
-      setAccounts(response.data || []);
-      setPagination(response.pagination);
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    const setOrDeleteParam = (
+      key: string,
+      value: string | number | boolean
+    ) => {
+      if (value) {
+        params.set(key, value.toString());
+      } else {
+        params.delete(key);
+      }
+    };
+
+    setOrDeleteParam("page", pagination.page);
+    setOrDeleteParam("fullname", queries.keywords);
+    setOrDeleteParam("role", queries.role?.label as string);
+
+    const storageParamsRoleKey = localStorage
+      .getItem("roleFilterValue")
+      ?.split(",")[0] as string;
+    if (queries.role && queries.role.value) {
+      const filterLabel = queries.role.label;
+      const filterValue = queries.role.value;
+      const [filterKey] = queries.role.value.split(",");
+      if (filterKey !== storageParamsRoleKey) {
+        params.delete("role");
+        params.set("role", filterLabel);
+        localStorage.setItem("roleFilterValue", filterValue);
+        localStorage.setItem("roleFilterLabel", filterLabel);
+      } else {
+        params.set("role", filterLabel);
+        localStorage.setItem("roleFilterValue", filterValue);
+        localStorage.setItem("roleFilterLabel", filterLabel);
+      }
+    } else {
+      params.delete("role");
+      localStorage.removeItem("roleFilterValue");
+      localStorage.removeItem("roleFilterLabel");
     }
-  };
+
+    const storageParamsAccountKey = localStorage
+      .getItem("accountFilterValue")
+      ?.split(",")[0] as string;
+    if (queries.filter && queries.filter.value) {
+      const filterLabel = queries.filter.label;
+      const filterValue = queries.filter.value;
+      const [filterKey] = queries.filter.value.split(",");
+      if (filterKey !== storageParamsAccountKey) {
+        params.delete(storageParamsAccountKey);
+        params.set(filterKey, filterLabel);
+        localStorage.setItem("accountFilterValue", filterValue);
+        localStorage.setItem("accountFilterLabel", filterLabel);
+      } else {
+        params.set(filterKey, filterLabel);
+        localStorage.setItem("accountFilterValue", filterValue);
+        localStorage.setItem("accountFilterLabel", filterLabel);
+      }
+    } else {
+      params.delete(storageParamsAccountKey);
+      localStorage.removeItem("accountFilterValue");
+      localStorage.removeItem("accountFilterLabel");
+    }
+
+    (async () => {
+      setLoading(true);
+      await dispatch(
+        fetchAccounts({
+          page: pagination.page,
+          limit: pagination.limit,
+          ...(queries.keywords && { fullname: queries.keywords }),
+          ...(queries.filter !== null
+            ? {
+                [queries.filter?.value?.split(",")[0]]:
+                  queries.filter?.value?.split(",")[1],
+              }
+            : {}),
+          ...(queries.role !== null && queries.role.value
+            ? {
+                role: queries.role?.value,
+              }
+            : {}),
+        })
+      );
+      setLoading(false);
+    })();
+    router.push(pathname + "?" + params.toString());
+  }, [queries, pagination.page]);
 
   useEffect(() => {
     const fetchRoles = async () => {
@@ -88,49 +150,6 @@ const Page = (props: any) => {
     };
     fetchRoles();
   }, []);
-
-  useEffect(() => {
-    const params = new URLSearchParams(searchParams.toString());
-    if (pagination.page) {
-      params.set("page", pagination.page.toString());
-    }
-
-    if (search.keywords) {
-      params.set("fullname", search.keywords);
-    } else {
-      params.delete("fullname");
-    }
-
-    if (search.role && search.role.value) {
-      params.set("role", search.role.label);
-      localStorage.setItem("roleValue", search.role.value);
-    } else {
-      params.delete("role");
-      localStorage.removeItem("roleValue");
-    }
-
-    if (search.filter && search.filter.value) {
-      params.set("status", search.filter.label);
-      localStorage.setItem("statusValue", search.filter.value);
-    } else {
-      params.delete("status");
-      localStorage.removeItem("statusValue");
-    }
-
-    router.push(pathname + "?" + params.toString());
-    fetchAccounts();
-  }, [pagination.page, search]);
-
-  const handleSeletedAll = () => {
-    if (selectedIds.length === accounts.length) {
-      setSelectedIds([]);
-    } else {
-      const ids: (string | number)[] = accounts.map(
-        (account: IUser) => account._id
-      );
-      setSelectedIds(ids);
-    }
-  };
 
   const handleChangeOptionsFeatured = (option: Option | null) => {
     setSelectedFeatured(option);
@@ -149,21 +168,7 @@ const Page = (props: any) => {
       if (result.isConfirmed) {
         const response = await AccountsService.delete(id);
         if (response?.success) {
-          setAccounts((prev: IUser[]) =>
-            prev.filter((account: IUser) => account._id !== response.data?._id)
-          );
-          if (accounts.length === 1) {
-            setPagination((prev) => ({
-              ...prev,
-              page: Math.max(prev.page - 1, 1),
-              totalItems: prev.totalItems - 1,
-            }));
-          } else {
-            setPagination((prev) => ({
-              ...prev,
-              totalItems: prev.totalItems - 1,
-            }));
-          }
+          dispatch(deletedAccount(id));
           Swal.fire({
             icon: "success",
             title: response?.message,
@@ -175,15 +180,6 @@ const Page = (props: any) => {
     });
   };
 
-  const handleSelectedIds = (id: string) => {
-    setSelectedIds((prev) => {
-      if (prev.includes(id)) {
-        return prev.filter((item) => item !== id);
-      }
-      return [...prev, id];
-    });
-  };
-
   const handleFeatured = async () => {
     if (selectedIds.length > 0 && selectedFeatured) {
       const response = await AccountsService.changeFeature({
@@ -191,7 +187,12 @@ const Page = (props: any) => {
         feature: selectedFeatured.value,
       });
       if (response?.success) {
-        fetchAccounts();
+        await dispatch(
+          updateFeature({
+            ids: selectedIds,
+            feature: selectedFeatured.value,
+          })
+        );
         Swal.fire({
           icon: response?.success ? "success" : "error",
           title: response?.message,
@@ -202,24 +203,53 @@ const Page = (props: any) => {
     }
   };
 
-  const { register, handleSubmit, setValue } = useForm<IAccountsSearch>({
+  const { register, handleSubmit, setValue } = useForm<IAccountsQueries>({
     defaultValues: {
-      keywords: search.keywords,
+      keywords: queries.keywords,
     },
   });
-  const onSubmit: SubmitHandler<IAccountsSearch> = async (
-    data: IAccountsSearch
+  const onSubmit: SubmitHandler<IAccountsQueries> = async (
+    data: IAccountsQueries
   ) => {
-    setSearch({
-      ...search,
-      keywords: data.keywords,
-      filter: data.filter,
-      role: data.role,
-    });
+    dispatch(handlePagination({ ...pagination, page: 1 }));
+    const filterKey = localStorage
+      .getItem("accountFilterValue")
+      ?.split(",")[0] as string;
+    if (!data.filter || !data.filter.value) {
+      if (filterKey) {
+        dispatch(
+          handleQueries({
+            ...queries,
+            filter: {
+              value: "",
+              label: "",
+            },
+          })
+        );
+      } else {
+        dispatch(
+          handleQueries({
+            ...queries,
+            keywords: data.keywords,
+            role: data.role,
+          })
+        );
+      }
+    } else {
+      dispatch(
+        handleQueries({
+          ...queries,
+          keywords: data.keywords,
+          filter: data.filter,
+          role: data.role,
+        })
+      );
+    }
   };
 
   return (
     <Container>
+      {loading && <Loading />}
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2>Quản lý tài khoản</h2>
         {userPermissions.includes("accounts_create") && (
@@ -253,7 +283,7 @@ const Page = (props: any) => {
                 name="roles"
                 isClearable={true}
                 defaultValue={
-                  search.role && search.role.value ? search.role : null
+                  queries.role && queries.role.value ? queries.role : null
                 }
                 options={roleOptions}
                 onChange={(option: SingleValue<Option>) =>
@@ -268,7 +298,7 @@ const Page = (props: any) => {
               name="filter"
               isClearable={true}
               defaultValue={
-                search.filter && search.filter.value ? search.filter : null
+                queries.filter && queries.filter.value ? queries.filter : null
               }
               options={adminAccountsFilteredOptions}
               onChange={(option: SingleValue<Option>) =>
@@ -311,7 +341,7 @@ const Page = (props: any) => {
                   selectedIds.length > 0 &&
                   selectedIds.length === accounts.length
                 }
-                onChange={handleSeletedAll}
+                onChange={() => dispatch(seletedIdsChangedAll())}
               />
             </th>
             <th>STT</th>
@@ -331,7 +361,7 @@ const Page = (props: any) => {
                   <Form.Check
                     type={"checkbox"}
                     checked={selectedIds.includes(account._id)}
-                    onChange={() => handleSelectedIds(account._id)}
+                    onChange={() => dispatch(selectedIdsChanged(account._id))}
                   />
                 </td>
                 <td>{(pagination.page - 1) * pagination.limit + index + 1}</td>
@@ -369,7 +399,12 @@ const Page = (props: any) => {
                     )}
                     {(userPermissions.includes("accounts_update") ||
                       account._id === userId) && (
-                      <Button variant="outline-secondary" className="center">
+                      <Button
+                        variant="outline-secondary"
+                        className="center"
+                        onClick={() =>
+                          router.push(`/admin/accounts/password/${account._id}`)
+                        }>
                         <MdPassword />
                       </Button>
                     )}
@@ -389,7 +424,10 @@ const Page = (props: any) => {
           Hiển thị {rangeCount(accounts, pagination)}
           trên {pagination.totalItems} kết quả.
         </div>
-        {/* <Pagination pagination={pagination} onHandlePagination={} /> */}
+        <Pagination
+          pagination={pagination}
+          onHandlePagination={handlePagination}
+        />
       </div>
     </Container>
   );

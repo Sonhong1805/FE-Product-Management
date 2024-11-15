@@ -52,6 +52,9 @@ export const userSlice = createSlice({
         .filter((product) => product.selected)
         .map((product) => product._id);
     },
+    updateUserInfo: (state, action) => {
+      state.userInfo = { ...state.userInfo, ...action.payload };
+    },
     logout: (state) => {
       state.isAuthenticated = false;
       state.userInfo = initialState.userInfo;
@@ -62,6 +65,7 @@ export const userSlice = createSlice({
       const index = productsInCart.findIndex((product) => product._id === id);
       if (index !== -1) {
         productsInCart.splice(index, 1);
+        state.selectedIds = state.selectedIds.filter((item) => item !== id);
       }
     },
     deleteProductsInCart: (state, action) => {
@@ -126,7 +130,7 @@ export const userSlice = createSlice({
           (product) => product._id === _id
         );
         if (currentProduct) {
-          currentProduct.quantity = quantity;
+          currentProduct.quantity = +quantity;
         }
       }
     });
@@ -143,6 +147,7 @@ export const {
   selectedIdsDeleted,
   addToWishlist,
   deleteWishlistItem,
+  updateUserInfo,
 } = userSlice.actions;
 
 export default userSlice.reducer;

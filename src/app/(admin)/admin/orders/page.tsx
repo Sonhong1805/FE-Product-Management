@@ -42,10 +42,10 @@ const Page = (props: any) => {
   const dispatch = useAppDispatch();
   const { router, pathname, searchParams, rangeCount } = props;
   const [selectedFeatured, setSelectedFeatured] = useState<Option | null>(null);
-  const pagination = useAppSelector((state) => state.order.pagination);
-  const selectedIds = useAppSelector((state) => state.order.selectedIds);
-  const orders = useAppSelector((state) => state.order.data);
-  const queries = useAppSelector((state) => state.order.queries);
+  const pagination = useAppSelector((state) => state.orders.pagination);
+  const selectedIds = useAppSelector((state) => state.orders.selectedIds);
+  const orders = useAppSelector((state) => state.orders.data);
+  const queries = useAppSelector((state) => state.orders.queries);
 
   useEffect(() => {
     const params = new URLSearchParams(searchParams.toString());
@@ -399,7 +399,6 @@ const Page = (props: any) => {
         </div>
         <Pagination
           pagination={pagination}
-          dispatch={dispatch}
           onHandlePagination={handlePagination}
         />
       </div>

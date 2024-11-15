@@ -4,16 +4,22 @@ import { nested } from "@/helpers/createNested";
 
 interface IInitialState {
   data: ICategory[];
+  parentCategories: ICategory[];
 }
 
 const initialState: IInitialState = {
   data: [],
+  parentCategories: [],
 };
 
 export const categorySlice = createSlice({
   name: "category",
   initialState,
-  reducers: {},
+  reducers: {
+    saveParentCategories: (state, action) => {
+      state.parentCategories = nested(action.payload);
+    },
+  },
   extraReducers: (builder) => {
     builder.addCase(fetchCategories.fulfilled, (state, action) => {
       state.data = nested(action.payload.data as ICategory[]);
@@ -21,6 +27,6 @@ export const categorySlice = createSlice({
   },
 });
 
-export const {} = categorySlice.actions;
+export const { saveParentCategories } = categorySlice.actions;
 
 export default categorySlice.reducer;

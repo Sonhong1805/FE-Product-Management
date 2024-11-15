@@ -1,3 +1,4 @@
+import { convertQuantity } from "@/helpers/convertQuantity";
 import priceFormat from "@/helpers/priceFormat";
 import Image from "next/image";
 import Link from "next/link";
@@ -65,15 +66,13 @@ const ProductItem = ({ product }: { product: IProduct }) => {
               ({product.ratings.length})
             </div>
             <div className="product__ratings-stars">
-              <BsStarFill color="#FFE31A" />
-              <BsStarFill color="#FFE31A" />
-              <BsStarFill color="#FFE31A" />
-              <BsStarFill color="#FFE31A" />
-              <BsStarFill color="#FFE31A" />
+              {new Array(5).fill("").map((_, index) => (
+                <BsStarFill color="#FFE31A" key={index} />
+              ))}
             </div>
           </div>
           <div className="product__quantity">
-            Còn: {product.quantity} / {product.sold}
+            Đã bán: {convertQuantity(product.sold)}
           </div>
         </div>
       </div>

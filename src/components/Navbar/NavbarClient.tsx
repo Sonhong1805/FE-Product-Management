@@ -45,7 +45,9 @@ const NavbarClient = () => {
             </div>
             {isShowMenu && (
               <div className="position-absolute top-100 w-100">
-                <ul className="bg-light text-dark nav-menu border">
+                <ul
+                  className="bg-light text-dark nav-menu border m-0 p-0"
+                  style={{ listStyle: "none" }}>
                   {categories.map((category: ICategory) => (
                     <NavbarNested
                       item={category}
@@ -58,7 +60,9 @@ const NavbarClient = () => {
             )}
           </Col>
           <Col xs={9}>
-            <ul className="d-flex m-0 text-light gap-2">
+            <ul
+              className="d-flex m-0 text-light gap-2 m-0 p-0"
+              style={{ listStyle: "none" }}>
               <li>
                 <Link
                   href={"/about"}

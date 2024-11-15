@@ -3,13 +3,13 @@ import withBase from "@/hocs/withBase";
 import React, { useEffect, useState } from "react";
 import SidebarNested from "../Sidebar/SidebarNested";
 import CategoriesService from "@/services/categories";
-import { useAppDispatch } from "@/lib/hooks";
 import {
   handleCategoriesSlug,
   handleCategorySlug,
   resetQueries,
   updatedCategorySlug,
 } from "@/lib/features/product/productSlice";
+import { saveParentCategories } from "@/lib/features/category/categorySlice";
 
 interface IProps extends IWithBaseProps {
   categorySlug: string | undefined;
@@ -29,11 +29,12 @@ const FilterCategory = (props: IProps) => {
         const nestedData = nested(response.data);
         setCategories(nestedData);
         dispatch(resetQueries());
+        dispatch(saveParentCategories(response.parentCategories));
         if (searchParams.get("categories")) {
           const allCategoriesSlug = searchParams
             .get("categories")
             .split(",")
-            .filter((c: string) => c);
+            .filter((category: string) => category);
           dispatch(handleCategoriesSlug([categorySlug, ...allCategoriesSlug]));
         } else {
           dispatch(handleCategorySlug(categorySlug));
@@ -61,7 +62,7 @@ const FilterCategory = (props: IProps) => {
       <div className="mb-2">
         <span className="fw-bold">Tất cả danh mục</span>
       </div>
-      <ul className="nav-side">
+      <ul className="nav-side p-0 m-0" style={{ listStyle: "none" }}>
         {categories.map((category: ICategory) => (
           <SidebarNested
             item={category}

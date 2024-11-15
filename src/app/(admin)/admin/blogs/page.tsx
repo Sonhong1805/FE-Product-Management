@@ -23,79 +23,88 @@ import { adminBlogsFeaturedOptions } from "@/options/featured";
 import Image from "next/image";
 import { useAppSelector } from "@/lib/hooks";
 import Pagination from "@/components/Pagination";
+import {
+  deletedBlog,
+  handlePagination,
+  handleQueries,
+  selectedIdsChanged,
+  seletedIdsChangedAll,
+  updateFeature,
+} from "@/lib/features/blog/blogSlice";
+import { fetchBlogs } from "@/lib/features/blog/blogThunk";
+import Loading from "@/components/Loading/Loading";
 
-const Page = (props: any) => {
+const Page = (props: IWithBaseProps) => {
   const userPermissions = useAppSelector(
     (state) => state.user.userInfo.role.permissions
   );
-  const { router, pathname, searchParams, rangeCount } = props;
-  const [selectedIds, setSelectedIds] = useState<(string | number)[]>([]);
-  const [blogs, setBlogs] = useState<IBlog[]>([]);
+  const { router, pathname, searchParams, rangeCount, dispatch } = props;
   const [selectedFeatured, setSelectedFeatured] = useState<Option | null>(null);
-  const [pagination, setPagination] = useState<IPagination>({
-    limit: 5,
-    page: 1,
-    totalItems: 0,
-    totalPages: 0,
-  });
-  const [search, setSearch] = useState<IBlogsSearch>({
-    keywords: searchParams.get("title") || "",
-    filter: {
-      label: searchParams.get("status") || "",
-      value: localStorage.getItem("statusValue") || "",
-    },
-  });
-
-  const fetchBlogs = async () => {
-    const response = await BlogsService.index({
-      page: pagination.page,
-      limit: pagination.limit,
-      ...(search.keywords && { title: search.keywords }),
-      ...(search.filter && search.filter.value
-        ? {
-            [search.filter?.value?.split(",")[0]]:
-              search.filter?.value?.split(",")[1],
-          }
-        : {}),
-    });
-    if (response?.success && response?.data && response?.pagination) {
-      setBlogs(response.data || []);
-      setPagination(response.pagination);
-    }
-  };
+  const blogs = useAppSelector((state) => state.blogs.data);
+  const pagination = useAppSelector((state) => state.blogs.pagination);
+  const queries = useAppSelector((state) => state.blogs.queries);
+  const [loading, setLoading] = useState<boolean>(false);
+  const selectedIds = useAppSelector((state) => state.products.selectedIds);
 
   useEffect(() => {
     const params = new URLSearchParams(searchParams.toString());
-    if (pagination.page) {
-      params.set("page", pagination.page.toString());
-    }
+    const setOrDeleteParam = (
+      key: string,
+      value: string | number | boolean
+    ) => {
+      if (value) {
+        params.set(key, value.toString());
+      } else {
+        params.delete(key);
+      }
+    };
 
-    if (search.keywords) {
-      params.set("title", search.keywords);
+    setOrDeleteParam("page", pagination.page);
+    setOrDeleteParam("name", queries.keywords);
+
+    const storageParamsKey = localStorage
+      .getItem("blogFilterValue")
+      ?.split(",")[0] as string;
+
+    if (queries.filter && queries.filter.value) {
+      const filterLabel = queries.filter.label;
+      const filterValue = queries.filter.value;
+      const [filterKey] = queries.filter.value.split(",");
+      if (filterKey !== storageParamsKey) {
+        params.delete(storageParamsKey);
+        params.set(filterKey, filterLabel);
+        localStorage.setItem("blogFilterValue", filterValue);
+        localStorage.setItem("blogFilterLabel", filterLabel);
+      } else {
+        params.set(filterKey, filterLabel);
+        localStorage.setItem("blogFilterValue", filterValue);
+        localStorage.setItem("blogFilterLabel", filterLabel);
+      }
     } else {
-      params.delete("title");
+      params.delete(storageParamsKey);
+      localStorage.removeItem("blogFilterValue");
+      localStorage.removeItem("blogFilterLabel");
     }
 
-    if (search.filter && search.filter.value) {
-      params.set("status", search.filter.label);
-      localStorage.setItem("statusValue", search.filter.value);
-    } else {
-      params.delete("status");
-      localStorage.removeItem("statusValue");
-    }
-
+    (async () => {
+      setLoading(true);
+      await dispatch(
+        fetchBlogs({
+          page: pagination.page,
+          limit: pagination.limit,
+          ...(queries.keywords && { title: queries.keywords }),
+          ...(queries.filter !== null
+            ? {
+                [queries.filter?.value?.split(",")[0]]:
+                  queries.filter?.value?.split(",")[1],
+              }
+            : {}),
+        })
+      );
+      setLoading(false);
+    })();
     router.push(pathname + "?" + params.toString());
-    fetchBlogs();
-  }, [pagination.page, search]);
-
-  const handleSeletedAll = () => {
-    if (selectedIds.length === blogs.length) {
-      setSelectedIds([]);
-    } else {
-      const ids: (string | number)[] = blogs.map((blog: IBlog) => blog._id);
-      setSelectedIds(ids);
-    }
-  };
+  }, [queries, pagination.page]);
 
   const handleChangeOptionsFeatured = (option: Option | null) => {
     setSelectedFeatured(option);
@@ -114,21 +123,7 @@ const Page = (props: any) => {
       if (result.isConfirmed) {
         const response = await BlogsService.delete(id);
         if (response?.success) {
-          setBlogs((prev: IBlog[]) =>
-            prev.filter((blog: IBlog) => blog._id !== response.data?._id)
-          );
-          if (blogs.length === 1) {
-            setPagination((prev) => ({
-              ...prev,
-              page: Math.max(prev.page - 1, 1),
-              totalItems: prev.totalItems - 1,
-            }));
-          } else {
-            setPagination((prev) => ({
-              ...prev,
-              totalItems: prev.totalItems - 1,
-            }));
-          }
+          dispatch(deletedBlog(id));
           Swal.fire({
             icon: "success",
             title: response?.message,
@@ -140,15 +135,6 @@ const Page = (props: any) => {
     });
   };
 
-  const handleSelectedIds = (id: string) => {
-    setSelectedIds((prev) => {
-      if (prev.includes(id)) {
-        return prev.filter((item) => item !== id);
-      }
-      return [...prev, id];
-    });
-  };
-
   const handleFeatured = async () => {
     if (selectedIds.length > 0 && selectedFeatured) {
       const response = await BlogsService.changeFeature({
@@ -156,7 +142,12 @@ const Page = (props: any) => {
         feature: selectedFeatured.value,
       });
       if (response?.success) {
-        fetchBlogs();
+        await dispatch(
+          updateFeature({
+            ids: selectedIds,
+            feature: selectedFeatured.value,
+          })
+        );
         Swal.fire({
           icon: response?.success ? "success" : "error",
           title: response?.message,
@@ -167,21 +158,51 @@ const Page = (props: any) => {
     }
   };
 
-  const { register, handleSubmit, setValue } = useForm<IBlogsSearch>({
+  const { register, handleSubmit, setValue } = useForm<IBlogsQueries>({
     defaultValues: {
-      keywords: search.keywords,
+      keywords: queries.keywords,
     },
   });
-  const onSubmit: SubmitHandler<IBlogsSearch> = async (data: IBlogsSearch) => {
-    setSearch({
-      ...search,
-      keywords: data.keywords,
-      filter: data.filter,
-    });
+  const onSubmit: SubmitHandler<IBlogsQueries> = async (
+    data: IBlogsQueries
+  ) => {
+    dispatch(handlePagination({ ...pagination, page: 1 }));
+    const filterKey = localStorage
+      .getItem("blogFilterValue")
+      ?.split(",")[0] as string;
+    if (!data.filter || !data.filter.value) {
+      if (filterKey) {
+        dispatch(
+          handleQueries({
+            ...queries,
+            filter: {
+              value: "",
+              label: "",
+            },
+          })
+        );
+      } else {
+        dispatch(
+          handleQueries({
+            ...queries,
+            keywords: data.keywords,
+          })
+        );
+      }
+    } else {
+      dispatch(
+        handleQueries({
+          ...queries,
+          keywords: data.keywords,
+          filter: data.filter,
+        })
+      );
+    }
   };
 
   return (
     <Container>
+      {loading && <Loading />}
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2>Quản lý bài viết</h2>
         {userPermissions.includes("blogs_create") && (
@@ -214,7 +235,7 @@ const Page = (props: any) => {
               name="filter"
               isClearable={true}
               defaultValue={
-                search.filter && search.filter.value ? search.filter : null
+                queries.filter && queries.filter.value ? queries.filter : null
               }
               options={adminBlogsFilteredOptions}
               onChange={(option: SingleValue<Option>) =>
@@ -256,7 +277,7 @@ const Page = (props: any) => {
                 checked={
                   selectedIds.length > 0 && selectedIds.length === blogs.length
                 }
-                onChange={handleSeletedAll}
+                onChange={() => dispatch(seletedIdsChangedAll())}
               />
             </th>
             <th>STT</th>
@@ -276,7 +297,7 @@ const Page = (props: any) => {
                   <Form.Check
                     type={"checkbox"}
                     checked={selectedIds.includes(blog._id)}
-                    onChange={() => handleSelectedIds(blog._id)}
+                    onChange={() => dispatch(selectedIdsChanged(blog._id))}
                   />
                 </td>
                 <td>{(pagination.page - 1) * pagination.limit + index + 1}</td>
@@ -332,7 +353,10 @@ const Page = (props: any) => {
           Hiển thị {rangeCount(blogs, pagination)}
           trên {pagination.totalItems} kết quả.
         </div>
-        {/* <Pagination pagination={pagination} onHandlePagination={}  /> */}
+        <Pagination
+          pagination={pagination}
+          onHandlePagination={handlePagination}
+        />
       </div>
     </Container>
   );

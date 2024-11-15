@@ -19,7 +19,9 @@ const NavbarNested = ({
         </Link>
         {item.children && <MdArrowForwardIos />}
         {item.children && (
-          <ul className="bg-light text-dark border">
+          <ul
+            className="bg-light text-dark border m-0 p-0"
+            style={{ listStyle: "none" }}>
             {item.children.map((child: any) => (
               <NavbarNested
                 item={child}

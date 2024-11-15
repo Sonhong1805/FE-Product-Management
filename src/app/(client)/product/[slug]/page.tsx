@@ -2,20 +2,23 @@
 import Breadcrumb from "@/components/Breadcrumb/Breadcrumb";
 import Rating from "@/components/Rating/Rating";
 import Wishlist from "@/components/Wishlist/Wishlist";
+import { convertQuantity } from "@/helpers/convertQuantity";
 import { getCookie } from "@/helpers/cookie";
 import priceFormat from "@/helpers/priceFormat";
 import withBase from "@/hocs/withBase";
+import { saveSelectedIds } from "@/lib/features/product/productSlice";
 import {
-  changeVariant,
   clearSelectedVariant,
   previewVariants,
 } from "@/lib/features/productDetail/productDetailSlice";
 import { fetchProductDetail } from "@/lib/features/productDetail/productDetailThunk";
 import { createCart } from "@/lib/features/user/userThunk";
-import { useAppDispatch, useAppSelector } from "@/lib/hooks";
+import { useAppSelector } from "@/lib/hooks";
 import Image from "next/image";
 import React, { ChangeEvent, useEffect, useRef, useState } from "react";
 import { Button, Col, Container, Form, InputGroup, Row } from "react-bootstrap";
+import { BsStarFill } from "react-icons/bs";
+import { FiMinus, FiPlus } from "react-icons/fi";
 import Swal from "sweetalert2";
 
 interface IProps extends IWithBaseProps {
@@ -23,7 +26,7 @@ interface IProps extends IWithBaseProps {
 }
 
 const Page = (props: IProps) => {
-  const { params, dispatch, router } = props;
+  const { params, dispatch, router, pathname } = props;
   const [quantity, setQuantity] = useState<number>(1);
   const isAuthenticated = useAppSelector((state) => state.user.isAuthenticated);
   const productDetail = useAppSelector((state) => state.productDetail.data);
@@ -73,12 +76,18 @@ const Page = (props: IProps) => {
 
   const handleIncreaseQuantity = () => {
     setQuantity((prev) => prev + 1);
+    if (quantity >= productDetail.quantity - productDetail.sold) {
+      setQuantity(productDetail.quantity - productDetail.sold);
+    }
   };
 
   const handleInputQuantity = (e: ChangeEvent<HTMLInputElement>) => {
     const newQuantity = parseInt(e.target.value);
     if (!isNaN(newQuantity) && newQuantity > 0) {
       setQuantity(newQuantity);
+    }
+    if (newQuantity >= productDetail.quantity - productDetail.sold) {
+      setQuantity(productDetail.quantity - productDetail.sold);
     }
   };
 
@@ -108,8 +117,22 @@ const Page = (props: IProps) => {
       setIsExistVariant(true);
     } else {
       if (!isAuthenticated) {
-        alert("Vui lòng đăng nhập");
+        Swal.fire({
+          title: "Bạn chưa đăng nhập?",
+          text: "Bạn cần đăng nhập để mua hàng",
+          icon: "warning",
+          showCancelButton: true,
+          confirmButtonColor: "#3085d6",
+          cancelButtonColor: "#d33",
+          cancelButtonText: "Huỷ",
+          confirmButtonText: "Đăng nhập",
+        }).then((result) => {
+          if (result.isConfirmed) {
+            router.push("/login?rollback=" + pathname);
+          }
+        });
       } else {
+        const maxQuantity = productDetail.quantity - productDetail.sold;
         const data = {
           _id,
           cartId,
@@ -120,11 +143,17 @@ const Page = (props: IProps) => {
           price,
           discountedPrice,
           quantity,
+          maxQuantity,
           variant: selectedVariant,
           selected,
         };
         const response = await dispatch(createCart(data)).unwrap();
         if (response.success) {
+          const selectedIdsProductInCart =
+            response.data.products
+              .filter((product: TProductInCart) => product.selected)
+              .map((product: TProductInCart) => product._id) || [];
+          await dispatch(saveSelectedIds(selectedIdsProductInCart));
           Swal.fire({
             icon: response?.success ? "success" : "error",
             title: response?.message,
@@ -143,8 +172,8 @@ const Page = (props: IProps) => {
 
   return (
     <div className="bg-body-secondary pb-5">
-      <Breadcrumb title={productDetail.category.title} href={`/shop`} />
-      <Container>
+      <Breadcrumb title={productDetail.category?.title} href={`/shop`} />
+      <Container className="mb-3">
         <Row className="bg-light py-4">
           <Col xs={6}>
             <div className="d-flex gap-3">
@@ -186,70 +215,131 @@ const Page = (props: IProps) => {
             </div>
           </Col>
           <Col xs={6}>
-            <Wishlist />
-            <div>{productDetail.title}</div>
-            <div>
-              Giá gốc:{priceFormat(previewVariant.price || productDetail.price)}
+            <div className="d-flex justify-content-between align-items-start gap-3 mb-2">
+              <h4>{productDetail.title}</h4>
+              <Wishlist />
             </div>
-            <div>
-              Giảm giá:-{previewVariant.discount || productDetail.discount}%
+            <div className="d-flex align-items-center gap-2 mb-2">
+              <div className="">({productDetail.ratings.length})</div>
+              <div className="d-flex gap-2">
+                {new Array(5).fill("").map((_, index) => (
+                  <BsStarFill color="#FFE31A" key={index} />
+                ))}
+              </div>
             </div>
-            <div>
-              Thành tiền:
-              {priceFormat(
-                previewVariant.discountedPrice || productDetail.discountedPrice
+            <div className="py-1 mb-2">
+              {productDetail.quantity === 0 ? (
+                <>Hết hàng</>
+              ) : (
+                <>
+                  Còn:{" "}
+                  {convertQuantity(productDetail.quantity - productDetail.sold)}{" "}
+                  / {convertQuantity(productDetail.quantity)} sản phẩm
+                </>
               )}
             </div>
-            <div className="d-flex flex-wrap gap-2">
-              <strong>{selectedVariant}</strong>
-              {productDetail.variants.length > 0 &&
-                productDetail.variants.map((variant: IVariant) => (
-                  <div key={variant._id}>
-                    <Form.Check
-                      type={"radio"}
-                      id={variant._id}
-                      name="variant"
-                      label={variant.name}
-                      onChange={() => handleVariant(variant)}
-                    />
-                  </div>
-                ))}
-              {isExistVariant && <span>Vui lòng chọn Phân loại hàng</span>}
+            <div className="product-detail">
+              {productDetail.discount > 0 && (
+                <>
+                  <span className="product-detail__price">
+                    {priceFormat(previewVariant.price || productDetail.price)}
+                  </span>
+                  <span className="product-detail__discount">
+                    (-{previewVariant.discount || productDetail.discount}%)
+                  </span>
+                </>
+              )}
+              <div className="product-detail__discounted-price">
+                {priceFormat(
+                  previewVariant.discountedPrice ||
+                    productDetail.discountedPrice
+                )}
+              </div>
             </div>
-            <div>
+            <div
+              className={`mb-3  ${
+                isExistVariant ? "bg-danger-subtle p-3" : ""
+              }`}>
+              {selectedVariant && (
+                <div className="py-2">
+                  <strong>{selectedVariant}</strong>
+                </div>
+              )}
+              <div className="d-flex flex-wrap gap-2">
+                {productDetail.variants.length > 0 &&
+                  productDetail.variants.map((variant: IVariant) => (
+                    <div key={variant._id}>
+                      <input
+                        type={"radio"}
+                        id={variant._id}
+                        name="variant"
+                        hidden
+                        className="variant-input"
+                        onChange={() => handleVariant(variant)}
+                      />
+                      <label htmlFor={variant._id} className="variant-label">
+                        {variant.name}
+                      </label>
+                    </div>
+                  ))}
+                {isExistVariant && (
+                  <div className="text-danger">
+                    Vui lòng chọn Phân loại hàng
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="w-25">
               <InputGroup className="mb-3">
                 <Button
-                  variant="outline-secondary"
+                  variant="danger"
                   id="button-addon1"
+                  disabled={productDetail.quantity === 0}
                   onClick={handleDecreaseQuantity}>
-                  -
+                  <FiMinus />
                 </Button>
                 <Form.Control
                   aria-label="Example text with button addon"
                   aria-describedby="basic-addon1"
-                  className="w-25"
+                  className="text-center"
                   min={1}
-                  value={quantity}
+                  max={productDetail.quantity}
+                  value={productDetail.quantity === 0 ? 0 : quantity}
+                  disabled={productDetail.quantity === 0}
                   onChange={handleInputQuantity}
                 />
                 <Button
-                  variant="outline-secondary"
+                  variant="primary"
                   id="button-addon2"
+                  disabled={productDetail.quantity === 0}
                   onClick={handleIncreaseQuantity}>
-                  +
+                  <FiPlus />
                 </Button>
               </InputGroup>
             </div>
-            <Button
-              variant="outline-danger"
-              onClick={() => handleAddToCart(false)}>
-              Thêm vào giỏ hàng
-            </Button>
-            <Button variant="outline-danger" onClick={() => handleBuyNow(true)}>
-              Mua ngay
-            </Button>
+            <div className="d-flex gap-2">
+              <Button
+                variant="outline-danger"
+                onClick={() => handleAddToCart(false)}>
+                Thêm vào giỏ hàng
+              </Button>
+              <Button
+                variant="outline-danger"
+                onClick={() => handleBuyNow(true)}>
+                Mua ngay
+              </Button>
+            </div>
           </Col>
         </Row>
+      </Container>
+      <Container className="mb-3 bg-light">
+        <div className="py-4">
+          <h3 className="mb-2">Mô tả sản phẩm</h3>
+          <div
+            dangerouslySetInnerHTML={{
+              __html: productDetail.descriptions,
+            }}></div>
+        </div>
       </Container>
       <Rating />
     </div>

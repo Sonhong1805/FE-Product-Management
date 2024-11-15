@@ -146,12 +146,18 @@ const Page = (props: IProps) => {
           <Col xs={9} className="">
             <HeaderShop />
             <ProductList products={products} />
-            <div className="d-flex justify-content-center align-items-center mb-5">
-              <Pagination
-                pagination={pagination}
-                onHandlePagination={handlePagination}
-              />
-            </div>
+            {products.length > 0 ? (
+              <div className="d-flex justify-content-center align-items-center mb-5">
+                <Pagination
+                  pagination={pagination}
+                  onHandlePagination={handlePagination}
+                />
+              </div>
+            ) : (
+              <div className="h3 text-center ">
+                <em>"Hiện tại không có sản phẩm nào"</em>
+              </div>
+            )}
           </Col>
         </Row>
       </Container>

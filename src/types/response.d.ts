@@ -4,5 +4,6 @@ interface IResponse<T> {
   success: boolean;
   pagination?: IPagination;
   priceMax?: number;
+  parentCategories?: ICategory[];
   data?: T;
 }

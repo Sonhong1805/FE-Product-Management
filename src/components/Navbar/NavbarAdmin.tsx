@@ -1,18 +1,17 @@
 import { adminNavbarLinks } from "@/constants/navbarLink";
 import withBase from "@/hocs/withBase";
 import { fetchSettings } from "@/lib/features/setting/settingThunk";
-import { useAppDispatch, useAppSelector } from "@/lib/hooks";
+import { useAppSelector } from "@/lib/hooks";
 import Image from "next/image";
 import Link from "next/link";
 import React, { useEffect } from "react";
 import { Nav, Navbar } from "react-bootstrap";
 
-const NavbarAdmin = ({ pathname }: any) => {
+const NavbarAdmin = ({ pathname, dispatch }: IWithBaseProps) => {
   const userPermissions = useAppSelector(
     (state) => state.user.userInfo.role.permissions
   );
   const setting = useAppSelector((state) => state.setting.data);
-  const dispatch = useAppDispatch();
   useEffect(() => {
     (async () => {
       await dispatch(fetchSettings());

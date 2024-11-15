@@ -84,13 +84,6 @@ export const productDetailSlice = createSlice({
       state.previewVariant.index = 0;
       state.selectedVariant = "";
     },
-    deleteRatingsItem: (state, action) => {
-      const id = action.payload;
-      const index = state.data.ratings.findIndex((rating) => rating._id === id);
-      if (index !== -1) {
-        state.data.ratings.splice(index, 1);
-      }
-    },
   },
   extraReducers: (builder) => {
     builder.addCase(fetchProductDetail.fulfilled, (state, action) => {
@@ -108,11 +101,7 @@ export const productDetailSlice = createSlice({
   },
 });
 
-export const {
-  changeVariant,
-  clearSelectedVariant,
-  deleteRatingsItem,
-  previewVariants,
-} = productDetailSlice.actions;
+export const { changeVariant, clearSelectedVariant, previewVariants } =
+  productDetailSlice.actions;
 
 export default productDetailSlice.reducer;

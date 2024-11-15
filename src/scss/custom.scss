@@ -2,7 +2,18 @@
 /* $theme-colors: (
   "primary": tomato,
 ); */
-
+.link-hover-danger {
+  transition: all 0.2s;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-decoration: none;
+  &:hover {
+    color: $red-primary !important;
+  }
+}
 .btn {
   --bs-btn-font-size: 1rem;
 }
@@ -248,6 +259,7 @@ ul.nav-menu li {
 
     &__details {
       @include custom-flex(space-between, center);
+      flex-wrap: wrap;
     }
     &__ratings {
       @include custom-flex(space-between, center);
@@ -336,5 +348,60 @@ ul.nav-menu li {
 
   &.active {
     border: 2px solid $red-primary;
+  }
+}
+
+.variant-input {
+  & + .variant-label {
+    cursor: pointer;
+    border: 1px solid rgba(0, 0, 0, 0.175);
+    padding: 7px 12px;
+    transition: all 0.2s;
+
+    &:hover {
+      color: $red-primary;
+      border: 1px solid $red-primary;
+    }
+  }
+
+  &:checked + .variant-label {
+    border: 1px solid $red-primary;
+    color: $red-primary;
+  }
+}
+
+.product-detail {
+  &__price {
+    font-size: 17px;
+    color: #608bc1;
+    text-decoration: line-through;
+    margin-right: 7px;
+  }
+  &__discount {
+  }
+  &__discounted-price {
+    font-size: 28px;
+    margin-bottom: 10px;
+    color: $red-primary;
+  }
+}
+
+.side-bar-link {
+  display: block;
+  color: #000000;
+  text-decoration: none;
+  padding: 11px 16px;
+  font-size: 20px;
+  border-radius: 11px;
+  margin-bottom: 14px;
+
+  &.active {
+    color: $red-primary;
+    background: $red-subtle;
+  }
+
+  &:hover {
+    color: $red-primary;
+    background: $red-subtle;
   }
 }

@@ -7,7 +7,7 @@ export default function Layout({
   children: React.ReactNode;
 }>) {
   return (
-    <div className="">
+    <div className="bg-body-secondary py-3">
       <Container>
         <Row>
           <SidebarAccount />

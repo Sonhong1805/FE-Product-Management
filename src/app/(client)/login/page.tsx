@@ -1,17 +1,17 @@
 "use client";
 import { setCookie } from "@/helpers/cookie";
+import withBase from "@/hocs/withBase";
 import { saveUserInfo } from "@/lib/features/user/userSlice";
-import { useAppDispatch } from "@/lib/hooks";
 import AuthService from "@/services/auth";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import React from "react";
+import React, { useState } from "react";
 import { Button, Container, FloatingLabel, Form } from "react-bootstrap";
 import { SubmitHandler, useForm } from "react-hook-form";
+import { BsEye, BsEyeSlash } from "react-icons/bs";
 
-const Page = () => {
-  const router = useRouter();
-  const dispatch = useAppDispatch();
+const Page = (props: IWithBaseProps) => {
+  const { router, dispatch, searchParams } = props;
+  const [isShowPassword, setIsShowPassword] = useState(false);
   const {
     register,
     handleSubmit,
@@ -25,8 +25,13 @@ const Page = () => {
       if (cartId) {
         setCookie("cartId", cartId);
       }
+
       dispatch(saveUserInfo(response.data.user));
-      router.push("/");
+      if (searchParams.get("rollback")) {
+        router.push(searchParams.get("rollback"));
+      } else {
+        router.push("/");
+      }
     }
   };
 
@@ -50,13 +55,30 @@ const Page = () => {
           )}
         </Form.Group>
         <Form.Group className="mb-3">
-          <FloatingLabel label="Nhập mật khẩu" className="mb-3">
-            <Form.Control
-              type="password"
-              placeholder="Nhập mật khẩu"
-              {...register("password", { required: true })}
-            />
-          </FloatingLabel>
+          <div className="position-relative">
+            <FloatingLabel label="Nhập mật khẩu" className="mb-3">
+              <Form.Control
+                type={isShowPassword ? "text" : "password"}
+                placeholder="Nhập mật khẩu"
+                {...register("password", { required: true })}
+              />
+              {isShowPassword ? (
+                <BsEye
+                  className="position-absolute"
+                  cursor={"pointer"}
+                  onClick={() => setIsShowPassword(false)}
+                  style={{ top: "19px", right: "10px", fontSize: "25px" }}
+                />
+              ) : (
+                <BsEyeSlash
+                  className="position-absolute"
+                  cursor={"pointer"}
+                  onClick={() => setIsShowPassword(true)}
+                  style={{ top: "19px", right: "10px", fontSize: "25px" }}
+                />
+              )}
+            </FloatingLabel>
+          </div>
           {errors.password && (
             <span className="text-danger">Vui lòng nhập mật khẩu</span>
           )}
@@ -86,4 +108,4 @@ const Page = () => {
   );
 };
 
-export default Page;
+export default withBase(Page);

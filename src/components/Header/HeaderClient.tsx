@@ -9,7 +9,17 @@ import AuthService from "@/services/auth";
 import Image from "next/image";
 import Link from "next/link";
 import React, { useEffect, useState } from "react";
-import { Button, Container, Form, InputGroup, Nav } from "react-bootstrap";
+import {
+  Button,
+  ButtonGroup,
+  Container,
+  Dropdown,
+  DropdownButton,
+  Form,
+  InputGroup,
+  Nav,
+  NavDropdown,
+} from "react-bootstrap";
 import { BsCart3, BsHeart, BsSearch } from "react-icons/bs";
 import { PiMagnifyingGlassBold } from "react-icons/pi";
 import { logout } from "@/lib/features/user/userSlice";
@@ -83,24 +93,29 @@ const HeaderClient = (props: IWithBaseProps) => {
                 </Nav.Item>
               </div>
             ) : (
-              <div className="d-flex">
-                <Nav.Item>
+              <NavDropdown
+                id="nav-dropdown-user"
+                title={userInfo?.fullname}
+                menuVariant="light">
+                <NavDropdown.Item>
                   <Link
                     href={"/account/profile"}
                     className="link-body-emphasis link-underline-opacity-0">
-                    {userInfo?.fullname}
+                    Hồ sơ cá nhân
                   </Link>
-                </Nav.Item>
-                <Nav.Item className="px-2">/</Nav.Item>
-                <Nav.Item>
+                </NavDropdown.Item>
+                <NavDropdown.Item>
                   <Link
-                    href={""}
-                    className="link-body-emphasis link-underline-opacity-0"
-                    onClick={handleLogout}>
-                    Đăng xuất
+                    href={"/account/orders"}
+                    className="link-body-emphasis link-underline-opacity-0">
+                    Đơn mua
                   </Link>
-                </Nav.Item>
-              </div>
+                </NavDropdown.Item>
+                <NavDropdown.Divider />
+                <NavDropdown.Item onClick={handleLogout}>
+                  Đăng xuất
+                </NavDropdown.Item>
+              </NavDropdown>
             )}
           </Nav>
         </Container>
@@ -158,7 +173,9 @@ const HeaderClient = (props: IWithBaseProps) => {
                 <span
                   className="position-absolute translate-middle badge rounded-pill bg-danger"
                   style={{ top: "10px", right: "-20px" }}>
-                  {wishlist.length > 9
+                  {wishlist.length > 99
+                    ? "99+"
+                    : wishlist.length > 9
                     ? wishlist.length
                     : "0" + wishlist.length}
                 </span>
@@ -173,7 +190,11 @@ const HeaderClient = (props: IWithBaseProps) => {
                 <span
                   className="position-absolute translate-middle badge rounded-pill bg-danger"
                   style={{ top: "10px", right: "-20px" }}>
-                  {totalQuantity > 9 ? totalQuantity : "0" + totalQuantity}
+                  {totalQuantity > 99
+                    ? "99+"
+                    : totalQuantity > 9
+                    ? totalQuantity
+                    : "0" + totalQuantity}
                 </span>
               </Button>
             </div>

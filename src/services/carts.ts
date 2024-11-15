@@ -9,17 +9,19 @@ const CartsService = {
     cartId,
     _id,
     type,
+    quantity,
   }: {
     cartId: string;
     _id: string;
-    type: "plus" | "minus";
+    type: "plus" | "minus" | "input";
+    quantity: number;
   }): Promise<
     IResponse<{
       _id: string;
       quantity: number;
     }>
   > => {
-    return axios.patch(`/carts/${cartId}/${_id}`, { type });
+    return axios.patch(`/carts/${cartId}/${_id}`, { type, quantity });
   },
   delete: (cartId: string, id: string): Promise<IResponse<ICart>> => {
     return axios.delete(`/carts/${cartId}/${id}`);

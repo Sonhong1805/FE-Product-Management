@@ -42,80 +42,83 @@ const Page = () => {
 
   return (
     <Col xs={9}>
-      <Table striped bordered hover className="mt-3 caption-top">
-        <caption>Danh sách đơn hàng </caption>
-        <thead className="table-info">
-          <tr>
-            <th>STT</th>
-            <th>Mã đơn hàng</th>
-            <th>Sản phẩm</th>
-            <th>Tổng tiền</th>
-            <th>Thanh toán</th>
-            <th>Trạng thái</th>
-            <th>Hành động</th>
-          </tr>
-        </thead>
-        <tbody>
-          {orders.length ? (
-            orders.map((order: IOrder, index: number) => (
-              <tr key={order._id}>
-                <td>{index + 1}</td>
-                <td>{order._id}</td>
-                <td>
-                  {order.products.map((product) => (
-                    <Image
-                      key={product._id}
-                      src={product.thumbnail + "" || "/image/no-image.png"}
-                      width={50}
-                      height={50}
-                      alt={product.title}
-                      priority
-                      className="me-1"
-                    />
-                  ))}
-                </td>
-                <td>{priceFormat(order.totalPrice)}</td>
-                <td>{methodPayment[order.method]}</td>
-                <td>
-                  {order.status === "APPROVED" && (
-                    <Badge bg="success">Đã duyệt</Badge>
-                  )}
-                  {order.status === "PENDING" && (
-                    <Badge bg="warning" text="dark">
-                      Chờ duyệt
-                    </Badge>
-                  )}
-                  {order.status === "CANCELED" && (
-                    <Badge bg="secondary">Đã huỷ</Badge>
-                  )}
-                </td>
-                <td>
-                  <div className="d-grid gap-2 grid-2">
-                    <Button
-                      variant="outline-success"
-                      className="center"
-                      onClick={() =>
-                        router.push("/account/orders/" + order._id)
-                      }>
-                      <FiEye />
-                    </Button>
-                    <Button
-                      variant="outline-danger"
-                      className="center"
-                      onClick={() => handleCancelledOrder(order._id)}>
-                      <TfiTrash />
-                    </Button>
-                  </div>
-                </td>
-              </tr>
-            ))
-          ) : (
-            <tr className="text-center">
-              <td colSpan={7}>Chưa có đơn hàng nào</td>
+      <div className="bg-light p-4">
+        <h4 className="py-3">Đơn hàng đã mua</h4>
+        <Table striped bordered hover className="mt-3 caption-top">
+          <caption>Danh sách đơn hàng </caption>
+          <thead className="table-info">
+            <tr>
+              <th>STT</th>
+              <th>Mã đơn hàng</th>
+              <th>Sản phẩm</th>
+              <th>Tổng tiền</th>
+              <th>Thanh toán</th>
+              <th>Trạng thái</th>
+              <th>Hành động</th>
             </tr>
-          )}
-        </tbody>
-      </Table>
+          </thead>
+          <tbody>
+            {orders.length ? (
+              orders.map((order: IOrder, index: number) => (
+                <tr key={order._id}>
+                  <td>{index + 1}</td>
+                  <td>{order._id}</td>
+                  <td>
+                    {order.products.map((product) => (
+                      <Image
+                        key={product._id}
+                        src={product.thumbnail + "" || "/image/no-image.png"}
+                        width={50}
+                        height={50}
+                        alt={product.title}
+                        priority
+                        className="me-1"
+                      />
+                    ))}
+                  </td>
+                  <td>{priceFormat(order.totalPrice)}</td>
+                  <td>{methodPayment[order.method]}</td>
+                  <td>
+                    {order.status === "APPROVED" && (
+                      <Badge bg="success">Đã duyệt</Badge>
+                    )}
+                    {order.status === "PENDING" && (
+                      <Badge bg="warning" text="dark">
+                        Chờ duyệt
+                      </Badge>
+                    )}
+                    {order.status === "CANCELED" && (
+                      <Badge bg="secondary">Đã huỷ</Badge>
+                    )}
+                  </td>
+                  <td>
+                    <div className="d-grid gap-2 grid-2">
+                      <Button
+                        variant="outline-success"
+                        className="center"
+                        onClick={() =>
+                          router.push("/account/orders/" + order._id)
+                        }>
+                        <FiEye />
+                      </Button>
+                      <Button
+                        variant="outline-danger"
+                        className="center"
+                        onClick={() => handleCancelledOrder(order._id)}>
+                        <TfiTrash />
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr className="text-center">
+                <td colSpan={7}>Chưa có đơn hàng nào</td>
+              </tr>
+            )}
+          </tbody>
+        </Table>
+      </div>
     </Col>
   );
 };
