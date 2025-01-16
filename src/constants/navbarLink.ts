@@ -7,7 +7,7 @@ export const clientNavbarLinks = [
   {
     id: 2,
     href: "/shop?page=1",
-    content: "Sản phẩm",
+    content: "Cửa hàng",
   },
   {
     id: 3,
