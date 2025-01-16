@@ -1,4 +1,5 @@
 import CategoriesService from "@/services/categories";
+import SettingsService from "@/services/settings";
 import { Metadata } from "next";
 
 interface IProps {
@@ -7,8 +8,12 @@ interface IProps {
 
 export async function generateMetadata({ params }: IProps): Promise<Metadata> {
   const categorySlug = params.categories?.at(-1) || "";
-  const response = await CategoriesService.detail(categorySlug);
-  const categoryDetail = response.data;
+  const [responseCategory, responseSettings] = await Promise.all([
+    CategoriesService.detail(categorySlug),
+    SettingsService.index(),
+  ]);
+  const categoryDetail = responseCategory.data;
+  const setting = responseSettings.data;
 
   return {
     title: categoryDetail?.title
@@ -23,7 +28,7 @@ export async function generateMetadata({ params }: IProps): Promise<Metadata> {
       description:
         "khám phá và mua sắm các sản phẩm từ các danh mục khác nhau. Tại đây, bạn có thể tìm thấy một loạt các sản phẩm đa dạng và chất lượng, từ đó đáp ứng nhu cầu mua sắm của mình một cách đầy đủ và thoải mái.",
       type: "website",
-      images: [process.env.NEXT_PUBLIC_MY_URL + "/images/logo.png"],
+      images: [setting?.logo + ""],
     },
   };
 }
