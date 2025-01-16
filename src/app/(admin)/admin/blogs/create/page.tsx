@@ -1,37 +1,55 @@
 "use client";
+import Loading from "@/components/Loading";
 import withBase from "@/hocs/withBase";
+import { topicsOptions } from "@/options/topics";
 import BlogsService from "@/services/blogs";
 import dynamic from "next/dynamic";
 import Image from "next/image";
-import React, { ChangeEvent, useEffect, useState } from "react";
+import React, { ChangeEvent, useEffect, useId, useState } from "react";
 import { Button, Container, Form } from "react-bootstrap";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { BiExit } from "react-icons/bi";
+import Select, { SingleValue } from "react-select";
 import Swal from "sweetalert2";
-const Editor = dynamic(() => import("@/components/Editor/Editor"), {
+const Editor = dynamic(() => import("@/components/Editor"), {
   ssr: false,
   loading: () => <p>Loading...</p>,
 });
 
-const Page = (props: any) => {
+const Page = (props: IWithBaseProps) => {
   const { router, searchParams } = props;
+  const [loading, setLoading] = useState<boolean>(false);
   const [thumbnailPreview, setThumbnailPreview] = useState("");
+  const [defaultTopic, setDefaultTopic] = useState<Option | null>(null);
 
   useEffect(() => {
     const fetchBlogDetail = async () => {
+      setLoading(true);
       const response = await BlogsService.detail(
-        searchParams.get("id") as string
+        searchParams.get("slug") as string
       );
       if (response.success && response.data) {
-        const { _id, title, thumbnail, content } = response.data as IBlogInputs;
+        const { _id, topic, title, thumbnail, content } =
+          response.data as IBlogInputs;
         setValue("_id", _id);
         setValue("title", title);
+        setValue("topic", topic);
+        const labelOption: Option = {
+          label: topic?.label || "",
+          value: topic?.value || "",
+        };
+
+        setDefaultTopic(labelOption || { value: "", label: "" });
         setValue("thumbnail", thumbnail);
         setValue("content", content);
+        setLoading(false);
       }
     };
-    fetchBlogDetail();
-  }, [searchParams]);
+    if (searchParams.get("slug")) {
+      fetchBlogDetail();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams.get("slug")]);
 
   const {
     register,
@@ -46,11 +64,12 @@ const Page = (props: any) => {
     Object.entries(data).forEach(([key, value]) => {
       if (key === "thumbnail" && value instanceof FileList) {
         formData.append("thumbnail", value[0] || "");
+      } else if (key === "topic") {
+        formData.append(key, JSON.stringify(value));
       } else {
         formData.append(key, value as string);
       }
     });
-
     if (watch("_id")) {
       const response = await BlogsService.update(watch("_id"), formData);
       if (response.success) {
@@ -88,8 +107,19 @@ const Page = (props: any) => {
 
   const getValueContent = (html: string) => setValue("content", html);
 
+  const handleSelectTopic = (newValue: SingleValue<Option>) => {
+    if (newValue && !Array.isArray(newValue)) {
+      setValue("topic", newValue as Option);
+      setDefaultTopic(newValue as Option);
+    } else {
+      setValue("topic", { value: "", label: "" });
+      setDefaultTopic({ value: "", label: "" });
+    }
+  };
+
   return (
     <Container>
+      {loading && <Loading />}
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2>{watch("_id") ? "Chỉnh sửa bài viết" : "Thêm mới bài viết"}</h2>
         <Button
@@ -104,7 +134,9 @@ const Page = (props: any) => {
         <div className="d-flex gap-5">
           <div className="w-50">
             <Form.Group className="mb-3" controlId="exampleForm.ControlInput1">
-              <Form.Label>Tiêu đề bài viết</Form.Label>
+              <Form.Label>
+                Tiêu đề bài viết (<span className="text-danger">*</span>)
+              </Form.Label>
               <Form.Control
                 placeholder="Nhập tiêu đề bài viết"
                 {...register("title", { required: true })}
@@ -115,11 +147,27 @@ const Page = (props: any) => {
                 </span>
               )}
             </Form.Group>
+            <Form.Group className="mb-3" controlId="exampleForm.ControlInput1">
+              <Form.Label>Chủ đề bài viết</Form.Label>
+              <Select
+                className="basic-single me-2 w-100"
+                classNamePrefix="select"
+                name="topic"
+                id="topic"
+                instanceId={useId()}
+                placeholder="-- Chọn chủ đề bài viêt --"
+                value={defaultTopic?.value ? defaultTopic : null}
+                options={topicsOptions}
+                onChange={handleSelectTopic}
+              />
+            </Form.Group>
             <Image
               src={
-                watch("thumbnail")
-                  ? thumbnailPreview || getValues("thumbnail") + ""
-                  : thumbnailPreview || "/image/no-image.png"
+                thumbnailPreview ||
+                (typeof getValues("thumbnail") === "string"
+                  ? getValues("thumbnail") + ""
+                  : "/image/no-image.png") ||
+                "/image/no-image.png"
               }
               width={200}
               height={200}
@@ -129,7 +177,7 @@ const Page = (props: any) => {
             />
 
             <Form.Group controlId="formFile" className="mb-3">
-              <Form.Label>Thêm ảnh</Form.Label>
+              <Form.Label>Thêm ảnh đại diện</Form.Label>
               <Form.Control
                 type="file"
                 {...register("thumbnail")}
@@ -161,7 +209,7 @@ const Page = (props: any) => {
             variant="outline-primary"
             className="w-25 m-auto"
             type="submit">
-            Thêm mới
+            {watch("_id") ? "Cập nhật" : "Thêm mới"}
           </Button>
         </Form.Group>
       </Form>

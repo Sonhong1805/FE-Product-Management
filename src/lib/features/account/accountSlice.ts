@@ -1,5 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit";
 import { fetchAccounts } from "./accountThunk";
+import { statusOptions } from "@/options/status";
 
 const getPage =
   typeof window !== "undefined"
@@ -7,12 +8,15 @@ const getPage =
     : "";
 const getFullname =
   typeof window !== "undefined"
-    ? new URLSearchParams(window.location.search).get("fullname")
+    ? new URLSearchParams(window.location.search).get("name")
     : "";
-const getRole =
+const getStatus =
   typeof window !== "undefined"
-    ? new URLSearchParams(window.location.search).get("role")
+    ? new URLSearchParams(window.location.search).get("status")
     : "";
+const findStatus = statusOptions.find((option) =>
+  option.value.includes(getStatus + "")
+);
 
 interface IInitialState {
   isLoading: boolean;
@@ -33,9 +37,9 @@ const initialState: IInitialState = {
   },
   queries: {
     keywords: getFullname ? getFullname : "",
-    filter: {
-      label: "",
-      value: "",
+    status: {
+      label: getStatus && findStatus ? findStatus.label : "",
+      value: getStatus && findStatus ? findStatus.value : "",
     },
     role: {
       label: "",
@@ -54,10 +58,13 @@ export const accountSlice = createSlice({
     handleQueries: (state, action) => {
       state.queries = { ...state.queries, ...action.payload };
     },
+    saveRole: (state, action) => {
+      state.queries.role = action.payload;
+    },
     resetQueries: (state) => {
       state.queries = {
         keywords: "",
-        filter: {
+        status: {
           label: "",
           value: "",
         },
@@ -134,6 +141,7 @@ export const {
   resetQueries,
   updateFeature,
   deletedAccount,
+  saveRole,
 } = accountSlice.actions;
 
 export default accountSlice.reducer;

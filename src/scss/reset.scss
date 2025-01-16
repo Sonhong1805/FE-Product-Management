@@ -6,6 +6,7 @@
 html {
   /* font-size: 62.5%; */
   scroll-behavior: smooth;
+  font-family: var(--font-roboto);
 }
 
 p,
@@ -30,4 +31,8 @@ ol.breadcrumb {
 a#nav-dropdown-user {
   color: #000000;
   padding: 0;
+}
+
+textarea {
+  resize: none;
 }

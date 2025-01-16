@@ -1,23 +1,18 @@
 "use client";
+import Loading from "@/components/Loading";
 import Pagination from "@/components/Pagination";
 import { methodPayment } from "@/constants/methodPayment";
 import priceFormat from "@/helpers/priceFormat";
+import setOrDeleteParam from "@/helpers/setOrDeleteParam";
 import withBase from "@/hocs/withBase";
 import {
   deleteOrder,
   handlePagination,
   handleQueries,
-  selectedIdsChanged,
-  seletedIdsChangedAll,
-  updateFeature,
   updateStatus,
 } from "@/lib/features/order/orderSlice";
 import { fetchOrders } from "@/lib/features/order/orderThunk";
-import { useAppDispatch, useAppSelector } from "@/lib/hooks";
-import {
-  adminOrdersFeaturedOptions,
-  adminProductsFeaturedOptions,
-} from "@/options/featured";
+import { useAppSelector } from "@/lib/hooks";
 import { adminOrdersFilteredOptions } from "@/options/filter";
 import OrdersService from "@/services/orders";
 import moment from "moment";
@@ -38,105 +33,57 @@ import { TfiTrash } from "react-icons/tfi";
 import Select, { SingleValue } from "react-select";
 import Swal from "sweetalert2";
 
-const Page = (props: any) => {
-  const dispatch = useAppDispatch();
-  const { router, pathname, searchParams, rangeCount } = props;
-  const [selectedFeatured, setSelectedFeatured] = useState<Option | null>(null);
+const Page = (props: IWithBaseProps) => {
+  const userPermissions = useAppSelector(
+    (state) => state.user.userInfo.role.permissions
+  );
+  const { router, pathname, searchParams, rangeCount, dispatch } = props;
   const pagination = useAppSelector((state) => state.orders.pagination);
-  const selectedIds = useAppSelector((state) => state.orders.selectedIds);
   const orders = useAppSelector((state) => state.orders.data);
   const queries = useAppSelector((state) => state.orders.queries);
+  const [loading, setLoading] = useState<boolean>(false);
+
+  const fetchOrdersData = async () => {
+    await dispatch(
+      fetchOrders({
+        page: pagination.page,
+        limit: 6,
+        ...(queries._id && { _id: queries._id }),
+        ...(queries.priceFrom > 0 && {
+          "totalPrice[gte]": queries.priceFrom,
+        }),
+        ...(queries.priceTo > 0 && { "totalPrice[lte]": queries.priceTo }),
+        ...(queries.filter !== null && queries.filter?.value
+          ? {
+              [queries.filter?.value?.split(",")[0]]:
+                queries.filter?.value?.split(",")[1],
+            }
+          : {}),
+      })
+    );
+  };
 
   useEffect(() => {
     const params = new URLSearchParams(searchParams.toString());
-    const setOrDeleteParam = (
-      key: string,
-      value: string | number | boolean
-    ) => {
-      if (value) {
-        params.set(key, value.toString());
-      } else {
-        params.delete(key);
-      }
-    };
+    setOrDeleteParam(params, "page", pagination.page);
+    setOrDeleteParam(params, "orderId", queries._id);
+    setOrDeleteParam(params, "priceFrom", queries.priceFrom);
+    setOrDeleteParam(params, "priceTo", queries.priceTo);
+    setOrDeleteParam(
+      params,
+      "filter",
+      queries.filter?.value && queries.filter?.value.split(",")[1]
+    );
 
-    setOrDeleteParam("page", pagination.page);
-    setOrDeleteParam("id", queries._id);
-    setOrDeleteParam("priceFrom", queries.priceFrom);
-    setOrDeleteParam("priceTo", queries.priceTo);
-
-    const storageParamsKey = localStorage
-      .getItem("orderFilterValue")
-      ?.split(",")[0] as string;
-
-    if (queries.filter && queries.filter.value) {
-      const filterLabel = queries.filter.label;
-      const filterValue = queries.filter.value;
-      const [filterKey] = queries.filter.value.split(",");
-      if (filterKey !== storageParamsKey) {
-        params.delete(storageParamsKey);
-        params.set(filterKey, filterLabel);
-        localStorage.setItem("orderFilterValue", filterValue);
-        localStorage.setItem("orderFilterLabel", filterLabel);
-      } else {
-        params.set(filterKey, filterLabel);
-        localStorage.setItem("orderFilterValue", filterValue);
-        localStorage.setItem("orderFilterLabel", filterLabel);
-      }
-    } else {
-      params.delete(storageParamsKey);
-      localStorage.removeItem("orderFilterValue");
-      localStorage.removeItem("orderFilterLabel");
-    }
-
-    (async () => {
-      await dispatch(
-        fetchOrders({
-          page: pagination.page,
-          limit: pagination.limit,
-          ...(queries._id && { _id: queries._id }),
-          ...(queries.priceFrom > 0 && {
-            "totalPrice[gte]": queries.priceFrom,
-          }),
-          ...(queries.priceTo > 0 && { "totalPrice[lte]": queries.priceTo }),
-          ...(queries.filter !== null
-            ? {
-                [queries.filter?.value?.split(",")[0]]:
-                  queries.filter?.value?.split(",")[1],
-              }
-            : {}),
-        })
-      );
-    })();
-    router.push(pathname + "?" + params.toString());
+    setLoading(true);
+    const delayDebounce = setTimeout(async () => {
+      fetchOrdersData();
+      setLoading(false);
+      router.push(pathname + "?" + params.toString());
+    }, 1000);
+    return () => clearTimeout(delayDebounce);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queries, pagination.page]);
-
-  const handleChangeOptionsFeatured = (option: Option | null) => {
-    setSelectedFeatured(option);
-  };
-
-  const handleFeatured = async () => {
-    if (selectedIds.length > 0 && selectedFeatured) {
-      const response = await OrdersService.changeFeature({
-        ids: selectedIds,
-        feature: selectedFeatured.value,
-      });
-      if (response.success) {
-        await dispatch(
-          updateFeature({
-            ids: selectedIds,
-            feature: selectedFeatured.value,
-          })
-        );
-        Swal.fire({
-          icon: response.success ? "success" : "error",
-          title: response.message,
-          showConfirmButton: false,
-          timer: 2000,
-        });
-      }
-    }
-  };
 
   const handleUpdateOrder = async (
     id: string,
@@ -171,53 +118,26 @@ const Page = (props: any) => {
 
   const { register, handleSubmit, setValue } = useForm<IOrderQueries>({
     defaultValues: {
-      _id: searchParams.get("id"),
-      priceFrom: searchParams.get("priceFrom"),
-      priceTo: searchParams.get("priceTo"),
+      _id: queries._id,
+      priceFrom: queries.priceFrom > 0 ? queries.priceFrom : undefined,
+      priceTo: queries.priceTo > 0 ? queries.priceTo : undefined,
     },
   });
-  const onSubmit: SubmitHandler<IOrderQueries> = async (
-    data: IOrderQueries
-  ) => {
-    const filterKey = localStorage
-      .getItem("orderFilterValue")
-      ?.split(",")[0] as string;
-    if (!data.filter || !data.filter.value) {
-      if (filterKey) {
-        await dispatch(
-          handleQueries({
-            ...queries,
-            filter: {
-              value: "",
-              label: "",
-            },
-          })
-        );
-      } else {
-        await dispatch(
-          handleQueries({
-            ...queries,
-            _id: data._id,
-            priceFrom: isNaN(data.priceFrom) ? 0 : data.priceFrom,
-            priceTo: isNaN(data.priceTo) ? 0 : data.priceTo,
-          })
-        );
-      }
-    } else {
-      await dispatch(
-        handleQueries({
-          ...queries,
-          _id: data._id,
-          priceFrom: isNaN(data.priceFrom) ? 0 : data.priceFrom,
-          priceTo: isNaN(data.priceTo) ? 0 : data.priceTo,
-          filter: data.filter,
-        })
-      );
-    }
+  const onSubmit: SubmitHandler<IOrderQueries> = (data: IOrderQueries) => {
+    dispatch(
+      handleQueries({
+        ...queries,
+        _id: data._id,
+        priceFrom: isNaN(data.priceFrom) ? 0 : data.priceFrom,
+        priceTo: isNaN(data.priceTo) ? 0 : data.priceTo,
+        filter: data.filter,
+      })
+    );
   };
 
   return (
     <Container>
+      {loading && <Loading />}
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2>Quản lý đơn hàng</h2>
       </div>
@@ -273,44 +193,16 @@ const Page = (props: any) => {
             </Button>
           </Form>
         </Tab>
-        <Tab eventKey="feartured" title="Tính năng">
-          <Form className="d-flex">
-            <div className="d-flex w-50 ">
-              <Select
-                className="basic-single flex-fill me-2"
-                classNamePrefix="select"
-                placeholder="-- Chọn tính năng muốn áp dụng --"
-                isClearable={true}
-                isSearchable={true}
-                name="featured"
-                options={adminOrdersFeaturedOptions}
-                onChange={handleChangeOptionsFeatured}
-              />
-              <Button variant="outline-primary" onClick={handleFeatured}>
-                Áp dụng
-              </Button>
-            </div>
-          </Form>
-        </Tab>
       </Tabs>
       <Table striped bordered hover className="mt-3 caption-top">
         <caption>Danh sách đơn hàng </caption>
         <thead className="table-info">
           <tr>
-            <th>
-              <Form.Check
-                type={"checkbox"}
-                checked={
-                  selectedIds.length > 0 && selectedIds.length === orders.length
-                }
-                onChange={() => dispatch(seletedIdsChangedAll())}
-              />
-            </th>
             <th>STT</th>
             <th>Mã đơn hàng</th>
             <th>Sản phẩm</th>
             <th>Tổng tiền</th>
-            <th>Thanh toán</th>
+            <th>Phương thức thanh toán</th>
             <th>Trạng thái</th>
             <th>Cập nhật</th>
             <th>Hành động</th>
@@ -320,17 +212,10 @@ const Page = (props: any) => {
           {orders.length ? (
             orders.map((order: IOrder, index: number) => (
               <tr key={order._id}>
-                <td>
-                  <Form.Check
-                    type={"checkbox"}
-                    checked={selectedIds.includes(order._id)}
-                    onChange={() => dispatch(selectedIdsChanged(order._id))}
-                  />
-                </td>
                 <td>{(pagination.page - 1) * pagination.limit + index + 1}</td>
                 <td>{order._id}</td>
                 <td>
-                  {order.products.map((product) => (
+                  {order.products.slice(0, 4).map((product) => (
                     <Image
                       key={product._id}
                       src={product.thumbnail + "" || "/image/no-image.png"}
@@ -342,7 +227,9 @@ const Page = (props: any) => {
                     />
                   ))}
                 </td>
-                <td>{priceFormat(order.totalPrice)}</td>
+                <td className="text-danger fw-bold">
+                  {priceFormat(order.totalPrice)}
+                </td>
                 <td>{methodPayment[order.method]}</td>
                 <td>
                   {order.status === "APPROVED" && (
@@ -360,27 +247,48 @@ const Page = (props: any) => {
                 <td>{moment(order.updatedAt).format("DD-MM-YYYY")}</td>
                 <td>
                   <div className="d-grid gap-2 grid-2">
-                    <Button variant="outline-success" className="center">
-                      <FiEye />
-                    </Button>
-                    <Button
-                      variant="outline-warning"
-                      className="center"
-                      onClick={() => handleUpdateOrder(order._id, "APPROVED")}>
-                      <FiCheckCircle />
-                    </Button>
-                    <Button
-                      variant="outline-secondary"
-                      className="center"
-                      onClick={() => handleUpdateOrder(order._id, "CANCELED")}>
-                      <FiXCircle />
-                    </Button>
-                    <Button
-                      variant="outline-danger"
-                      className="center"
-                      onClick={() => handleDeleteOrder(order._id)}>
-                      <TfiTrash />
-                    </Button>
+                    {userPermissions.includes("orders_view") && (
+                      <Button
+                        variant="outline-success"
+                        className="center"
+                        onClick={() =>
+                          router.push(`/admin/orders/view?id=${order._id}`)
+                        }>
+                        <FiEye />
+                      </Button>
+                    )}
+                    {(userPermissions.includes("orders_approved") &&
+                      (order.status === "APPROVED" ||
+                        order.status === "CANCELED")) || (
+                      <Button
+                        variant="outline-warning"
+                        className="center"
+                        onClick={() =>
+                          handleUpdateOrder(order._id, "APPROVED")
+                        }>
+                        <FiCheckCircle />
+                      </Button>
+                    )}
+                    {(userPermissions.includes("orders_canceled") &&
+                      (order.status === "APPROVED" ||
+                        order.status === "CANCELED")) || (
+                      <Button
+                        variant="outline-secondary"
+                        className="center"
+                        onClick={() =>
+                          handleUpdateOrder(order._id, "CANCELED")
+                        }>
+                        <FiXCircle />
+                      </Button>
+                    )}
+                    {userPermissions.includes("orders_delete") && (
+                      <Button
+                        variant="outline-danger"
+                        className="center"
+                        onClick={() => handleDeleteOrder(order._id)}>
+                        <TfiTrash />
+                      </Button>
+                    )}
                   </div>
                 </td>
               </tr>
@@ -399,6 +307,7 @@ const Page = (props: any) => {
         </div>
         <Pagination
           pagination={pagination}
+          siblingCount={1}
           onHandlePagination={handlePagination}
         />
       </div>

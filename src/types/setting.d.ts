@@ -8,3 +8,26 @@ interface ISetting {
   copyright: string;
   updatedAt?: Date;
 }
+
+interface IDashboard {
+  products: {
+    total: number;
+    active: number;
+    inactive: number;
+  };
+  categories: {
+    total: number;
+    active: number;
+    inactive: number;
+  };
+  orders: {
+    total: number;
+    approved: number;
+    pending: number;
+  };
+  contacts: {
+    total: number;
+    active: number;
+    inactive: number;
+  };
+}

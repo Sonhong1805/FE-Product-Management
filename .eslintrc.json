@@ -1,4 +1,4 @@
 {
-  "extends": ["next/core-web-vitals", "next/typescript"],
-  "@typescript-eslint/no-explicit-any": ["off"]
+  "extends": ["next/core-web-vitals", "next/typescript"]
+  // "@typescript-eslint/no-explicit-any": ["on"]
 }

@@ -7,6 +7,7 @@ import productDetailReducer from "../lib/features/productDetail/productDetailSli
 import orderReducer from "../lib/features/order/orderSlice";
 import blogReducer from "../lib/features/blog/blogSlice";
 import accountReducer from "../lib/features/account/accountSlice";
+import contactReducer from "../lib/features/contact/contactSlice";
 
 const rootReducer = combineReducers({
   user: userReducer,
@@ -17,6 +18,7 @@ const rootReducer = combineReducers({
   orders: orderReducer,
   blogs: blogReducer,
   accounts: accountReducer,
+  contacts: contactReducer,
 });
 
 export const makeStore = () => {

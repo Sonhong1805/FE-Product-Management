@@ -1,105 +1,108 @@
 "use client";
 import React, { useEffect, useRef, useState } from "react";
-import { Button, Container, Form, Tab, Table, Tabs } from "react-bootstrap";
+import { Button, Container, Form, Tab, Tabs } from "react-bootstrap";
 import { CiCirclePlus } from "react-icons/ci";
-import Select from "react-select";
+import Select, { SingleValue } from "react-select";
 import Modal from "react-modal";
 import { IoMdClose } from "react-icons/io";
 import CategoriesService from "@/services/categories";
 import { SubmitHandler, useForm } from "react-hook-form";
 import Swal from "sweetalert2";
-import { nested } from "@/helpers/createNested";
-import OptionsNested from "@/components/Option/OptionsNested";
-import getIdsNested from "@/helpers/getIdsNested";
-import { adminCategoriesFeaturedOptions } from "@/options/featured";
-import { adminCategoriesFilteredOptions } from "@/options/filter";
-import { nonAccentVietnamese } from "@/helpers/nonAccentVietnamese";
-import RowNested from "@/components/Row/RowNested";
 import { useAppSelector } from "@/lib/hooks";
+import { featuredOptions } from "@/options/feature";
+import { statusOptions } from "@/options/status";
+import withBase from "@/hocs/withBase";
+import generateBreadcrumbs from "@/helpers/generateBreadcrumbs";
+import setOrDeleteParam from "@/helpers/setOrDeleteParam";
+import "./style.scss";
+import CategoryPagination from "./CategoryPagination";
+import Loading from "@/components/Loading";
 
-const Page = () => {
+const Page = (props: IWithBaseProps) => {
+  const { searchParams, router, pathname } = props;
   const userPermissions = useAppSelector(
     (state) => state.user.userInfo.role.permissions
   );
   const [modalIsOpen, setIsOpen] = useState(false);
   const [categories, setCategories] = useState<ICategory[]>([]);
-  const [selectedId, setSelectedId] = useState<string>("");
-  const [selectedIds, setSelectedIds] = useState<(string | number)[]>([]);
+  const originalCategoriesRef = useRef<ICategory[]>([]);
+  const [selectedSlug, setSelectedSlug] = useState<string>("");
+  const [selectedSlugs, setSelectedSlugs] = useState<string[]>([]);
   const [selectedFeatured, setSelectedFeatured] = useState<Option | null>(null);
-  const [selectedFilterd, setSelectedFilterd] = useState<Option | null>(null);
   const keywordsRef = useRef<HTMLInputElement | null>(null);
-
-  const fetchCategories = async () => {
+  const findStatus = statusOptions.find((option) =>
+    option.value.includes(searchParams.get("status") + "")
+  );
+  const [selectedStatus, setSelectedStatus] = useState<Option | null>(
+    findStatus || null
+  );
+  const [optionsCategories, setOptionsCategories] = useState<Option[]>([]);
+  const [parentOption, setParentOption] = useState<Option | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
+  const fetchCategoriesData = async () => {
     const response = await CategoriesService.index();
     if (response?.success && response.data) {
-      const nestedData = nested(response.data);
-      setCategories(nestedData || []);
+      const categories: ICategory[] = response.data;
+      const newCategories =
+        categories.map((item) => ({
+          ...item,
+          breadcrumbs: generateBreadcrumbs(categories, item.slug),
+        })) || [];
+      const filteredCategories = newCategories.filter(filterCategories) || [];
+      setCategories(
+        filteredCategories.length > 0 ? filteredCategories : newCategories
+      );
+      originalCategoriesRef.current = newCategories || [];
     }
   };
   useEffect(() => {
-    fetchCategories();
+    setLoading(true);
+    const delayDebounce = setTimeout(async () => {
+      fetchCategoriesData();
+      setLoading(false);
+    }, 1000);
+    return () => clearTimeout(delayDebounce);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const addCategoryToChildren = (
-    categories: ICategory[],
-    newCategory: ICategory
-  ): ICategory[] => {
-    return categories.map((category: ICategory) => {
-      if (category._id === newCategory.parent_slug) {
-        return {
-          ...category,
-          children: [...(category.children || []), newCategory],
-        };
-      }
-      if (category.children) {
-        return {
-          ...category,
-          children: addCategoryToChildren(category.children, newCategory),
-        };
-      }
-      return category;
+  useEffect(() => {
+    const defaltOption = { label: "-- Chọn danh mục cha --", value: "" };
+    const categoriesOptions = originalCategoriesRef.current.map((category) => {
+      return { label: category.title, value: category.slug };
     });
+
+    setOptionsCategories([defaltOption, ...categoriesOptions]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [originalCategoriesRef.current]);
+
+  const setParamsToURL = () => {
+    const params = new URLSearchParams(searchParams.toString());
+    setOrDeleteParam(params, "keywords", keywordsRef.current?.value);
+    setOrDeleteParam(
+      params,
+      "status",
+      selectedStatus?.value && selectedStatus?.value.split(",")[1]
+    );
+    router.push(pathname + "?" + params.toString());
   };
 
-  const deleteCategoryToChildren = (
-    categories: ICategory[],
-    id: string
-  ): ICategory[] => {
-    return categories
-      .filter((category) => category._id !== id)
-      .map((category) => {
-        if (category.children) {
-          return {
-            ...category,
-            children: deleteCategoryToChildren(category.children, id),
-          };
-        }
-        return category;
-      });
+  const filterCategories = (category: ICategory) => {
+    const isKeywords = keywordsRef.current
+      ? category.title
+          .toLowerCase()
+          .includes(keywordsRef.current.value.toLowerCase())
+      : true;
+    const isStatus = selectedStatus
+      ? category.status === JSON.parse(selectedStatus?.value.split(",")[1] + "")
+      : true;
+
+    return isKeywords && isStatus;
   };
 
-  const updateCategoryToChildren = (
-    categories: ICategory[],
-    newData: ICategory
-  ): ICategory[] => {
-    return categories.map((category) => {
-      if (category._id === newData._id) {
-        return {
-          ...category,
-          ...newData,
-        };
-      }
-
-      if (category.children && category.children.length > 0) {
-        return {
-          ...category,
-          children: updateCategoryToChildren(category.children, newData),
-        };
-      }
-
-      return category;
-    });
-  };
+  useEffect(() => {
+    setParamsToURL();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [keywordsRef.current?.value, searchParams]);
 
   const {
     register,
@@ -116,16 +119,20 @@ const Page = () => {
   const onSubmit: SubmitHandler<ICategoryInputs> = async (
     data: ICategoryInputs
   ) => {
-    if (selectedId) {
+    if (selectedSlug) {
       const response = await CategoriesService.update({
-        id: selectedId,
+        slug: selectedSlug,
         title: data.title,
-        parent_id: data.parent_slug,
+        parent_slug: data.parent_slug,
       });
       if (response && response.data) {
-        // const newData: ICategory = response.data;
-        // setCategories((prev) => updateCategoryToChildren(prev, newData));
-        fetchCategories();
+        const categories: ICategory[] = response.data;
+        const newCategories = categories.map((item) => ({
+          ...item,
+          breadcrumbs: generateBreadcrumbs(categories, item.slug),
+        }));
+        setCategories(newCategories || []);
+        originalCategoriesRef.current = newCategories || [];
         closeModal();
         reset();
         Swal.fire({
@@ -139,18 +146,26 @@ const Page = () => {
     } else {
       const response = await CategoriesService.create(data);
       if (response?.success && response.data) {
-        const newCategory: ICategory = response.data;
-        setCategories((prev) => {
-          if (!newCategory.parent_slug) {
-            return [newCategory, ...prev];
-          }
-          return addCategoryToChildren(prev, newCategory);
-        });
+        const categories: ICategory[] = response.data;
+        const newCategories = categories.map((item) => ({
+          ...item,
+          breadcrumbs: generateBreadcrumbs(categories, item.slug),
+        }));
+        setCategories(newCategories || []);
+        originalCategoriesRef.current = newCategories || [];
         closeModal();
         reset();
         Swal.fire({
           position: "center",
           icon: "success",
+          title: response?.message,
+          showConfirmButton: false,
+          timer: 2000,
+        });
+      } else {
+        Swal.fire({
+          position: "center",
+          icon: "error",
           title: response?.message,
           showConfirmButton: false,
           timer: 2000,
@@ -161,25 +176,47 @@ const Page = () => {
 
   function openModal() {
     setIsOpen(true);
+    const defaltOption = { label: "-- Chọn danh mục cha --", value: "" };
+    const categoriesOptions = originalCategoriesRef.current.map((category) => {
+      return { label: category.title, value: category.slug };
+    });
+    setOptionsCategories([defaltOption, ...categoriesOptions]);
   }
 
   function closeModal() {
     setIsOpen(false);
-    setSelectedId("");
+    setSelectedSlug("");
+    setParentOption(null);
     reset();
   }
 
-  const updateCategory = async (id: string) => {
+  const updateCategory = async (slug: string) => {
     openModal();
-    const response = await CategoriesService.detail(id);
+    const response = await CategoriesService.detail(slug);
     if (response?.success) {
       setValue("title", response.data?.title || "");
       setValue("parent_slug", response.data?.parent_slug || "");
-      setSelectedId(id);
+
+      const defaltOption = { label: "-- Chọn danh mục cha --", value: "" };
+      const categoriesOptions = originalCategoriesRef.current.map(
+        (category) => {
+          return { label: category.title, value: category.slug };
+        }
+      );
+
+      const parentCategory = categoriesOptions.find(
+        (option: Option) => option.value === response.data?.parent_slug
+      );
+      setParentOption(parentCategory || null);
+      const filteredCategories = categoriesOptions.filter(
+        (category) => category.value !== response.data?.slug
+      );
+      setOptionsCategories([defaltOption, ...filteredCategories]);
+      setSelectedSlug(slug);
     }
   };
 
-  const deleteCategory = async (id: string) => {
+  const deleteCategory = async (slug: string) => {
     Swal.fire({
       text: "Bạn có chắc muốn xoá danh mục này?\n(⚠Việc xoá danh mục cha sẽ xoá cả danh mục con)",
       icon: "warning",
@@ -190,9 +227,15 @@ const Page = () => {
       cancelButtonText: "Huỷ",
     }).then(async (result) => {
       if (result.isConfirmed) {
-        const response = await CategoriesService.delete(id);
-        if (response?.success) {
-          setCategories((prev) => deleteCategoryToChildren(prev, id || ""));
+        const response = await CategoriesService.delete(slug);
+        if (response?.success && response.data) {
+          const categories: ICategory[] = response.data;
+          const newCategories = categories.map((item) => ({
+            ...item,
+            breadcrumbs: generateBreadcrumbs(categories, item.slug),
+          }));
+          setCategories(newCategories || []);
+          originalCategoriesRef.current = newCategories || [];
           Swal.fire({
             icon: "success",
             title: response?.message,
@@ -209,13 +252,19 @@ const Page = () => {
   };
 
   const handleFeatured = async () => {
-    if (selectedIds.length > 0 && selectedFeatured) {
+    if (selectedSlugs.length > 0 && selectedFeatured) {
       const response = await CategoriesService.changeFeature({
-        ids: selectedIds,
+        slugs: selectedSlugs,
         feature: selectedFeatured.value,
       });
-      if (response?.success) {
-        fetchCategories();
+      if (response?.success && response.data) {
+        const categories: ICategory[] = response.data;
+        const newCategories = categories.map((item) => ({
+          ...item,
+          breadcrumbs: generateBreadcrumbs(categories, item.slug),
+        }));
+        setCategories(newCategories || []);
+        originalCategoriesRef.current = newCategories || [];
         Swal.fire({
           icon: response?.success ? "success" : "error",
           title: response?.message,
@@ -226,55 +275,21 @@ const Page = () => {
     }
   };
 
-  const handleSeletedAll = () => {
-    if (selectedIds.length === getIdsNested(categories).length) {
-      setSelectedIds([]);
-    } else {
-      const ids: (string | number)[] = getIdsNested(categories);
-      setSelectedIds(ids);
-    }
+  const handleSearch = () => {
+    const filteredCategories =
+      originalCategoriesRef.current.filter(filterCategories) || [];
+    setCategories(filteredCategories.length > 0 ? filteredCategories : []);
+    setParamsToURL();
   };
 
-  const flattenCategories = (categories: ICategory[]): ICategory[] => {
-    return categories.reduce((acc: ICategory[], category: ICategory) => {
-      const flattened = [...acc, category];
-      if (category.children && category.children.length > 0) {
-        return [...flattened, ...flattenCategories(category.children)];
-      }
-      return flattened;
-    }, []);
+  const handleSelectedOptionCategories = (newValue: SingleValue<Option>) => {
+    setParentOption(newValue);
+    setValue("parent_slug", newValue?.value + "");
   };
-
-  // const handleSearch = () => {
-  //   const keywords = keywordsRef.current?.value?.trim().toLowerCase();
-  //   let key: keyof ICategory | "" = "",
-  //     value: boolean | null = null;
-
-  //   if (selectedFilterd?.value) {
-  //     const filterParts = selectedFilterd.value.split("-");
-  //     key = filterParts[0] as keyof ICategory;
-  //     value = filterParts[1] === "true";
-  //   }
-
-  //   const flatCategories = flattenCategories(categoriesTemp);
-
-  //   const filteredCategories = flatCategories.filter((category: ICategory) => {
-  //     const isKeywordMatch = keywords
-  //       ? nonAccentVietnamese(category.title.toLowerCase()).includes(
-  //           nonAccentVietnamese(keywords)
-  //         )
-  //       : true;
-
-  //     const isFilterMatch = key ? category[key] === value : true;
-
-  //     return isKeywordMatch && isFilterMatch;
-  //   });
-
-  //   setCategories(filteredCategories);
-  // };
 
   return (
     <Container>
+      {loading && <Loading />}
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2>Quản lý danh mục</h2>
         {userPermissions.includes("categories_create") && (
@@ -288,32 +303,36 @@ const Page = () => {
         )}
       </div>
       <Tabs
-        defaultActiveKey="featured"
+        defaultActiveKey="search"
         id="uncontrolled-tab-example"
         className="mb-3">
-        {/* <Tab eventKey="search" title="Tìm kiếm">
-          <div className="d-flex w-75">
+        <Tab eventKey="search" title="Tìm kiếm">
+          <div className="d-flex w-50">
             <Form.Control
               className="flex-fill me-2 w-auto"
               type="text"
+              defaultValue={searchParams.get("keywords") || ""}
               placeholder="Nhập tên danh mục"
               name="title"
               ref={keywordsRef}
             />
             <Select
-              className="basic-single flex-fill me-2"
+              className="basic-single me-2"
               classNamePrefix="select"
-              placeholder="-- Chọn bộ lọc --"
-              name="filter"
+              placeholder="-- Chọn trạng thái --"
+              name="status"
               isClearable={true}
-              options={adminCategoryFilteredOptions}
-              onChange={(option) => setSelectedFilterd(option)}
+              defaultValue={
+                selectedStatus && selectedStatus.value ? selectedStatus : null
+              }
+              options={statusOptions}
+              onChange={(option) => setSelectedStatus(option)}
             />
             <Button variant="outline-success" onClick={handleSearch}>
               Tìm kiếm
             </Button>
           </div>
-        </Tab> */}
+        </Tab>
         <Tab
           eventKey="featured"
           title="Tính năng"
@@ -326,7 +345,7 @@ const Page = () => {
               isClearable={true}
               isSearchable={true}
               name="featured"
-              options={adminCategoriesFeaturedOptions}
+              options={featuredOptions}
               onChange={handleChangeOptionsFeatured}
             />
             <Button variant="outline-primary" onClick={handleFeatured}>
@@ -335,38 +354,14 @@ const Page = () => {
           </div>
         </Tab>
       </Tabs>
-      <Table striped bordered hover className="mt-3 mb-5 caption-top">
-        <caption>Danh sách danh mục sản phẩm</caption>
-        <thead className="table-info">
-          <tr>
-            <th>
-              <Form.Check
-                type={"checkbox"}
-                checked={
-                  selectedIds.length > 0 &&
-                  selectedIds.length === getIdsNested(categories).length
-                }
-                onChange={handleSeletedAll}
-              />
-            </th>
-            <th>Tên danh mục</th>
-            <th>Breadcrumbs</th>
-            <th>Trạng thái</th>
-            <th>Cập nhật</th>
-            <th>Hành động</th>
-          </tr>
-        </thead>
-        <tbody>
-          <RowNested
-            categories={categories}
-            parentPath=""
-            onUpdateCategory={updateCategory}
-            onDeleteCategory={deleteCategory}
-            selectedIds={selectedIds}
-            setSelectedIds={setSelectedIds}
-          />
-        </tbody>
-      </Table>
+      <CategoryPagination
+        itemsPerPage={6}
+        items={categories}
+        selectedSlugs={selectedSlugs}
+        setSelectedSlugs={setSelectedSlugs}
+        onUpdateCategory={updateCategory}
+        onDeleteCategory={deleteCategory}
+      />
       <Modal
         isOpen={modalIsOpen}
         ariaHideApp={false}
@@ -374,7 +369,7 @@ const Page = () => {
         className={"modal-style"}
         contentLabel="Example Modal">
         <div className="d-flex justify-content-between align-items-center mb-3">
-          <h4>{selectedId ? "Cập nhật danh mục" : "Thêm mới danh mục"}</h4>
+          <h4>{selectedSlug ? "Cập nhật danh mục" : "Thêm mới danh mục"}</h4>
           <IoMdClose size={25} cursor={"pointer"} onClick={closeModal} />
         </div>
         <Form onSubmit={handleSubmit(onSubmit)}>
@@ -391,20 +386,20 @@ const Page = () => {
           </Form.Group>
           <Form.Group className="mb-3" controlId="exampleForm.ControlInput1">
             <Form.Label>Danh mục cha</Form.Label>
-            <Form.Select
-              aria-label="Default select example"
-              className="mb-3"
-              {...register("parent_slug")}>
-              <option value={""}>-- Chọn danh mục cha --</option>
-              <OptionsNested
-                categories={categories}
-                title={""}
-                selectedId={selectedId}
-              />
-            </Form.Select>
+            <Select
+              className="basic-single me-2"
+              classNamePrefix="select"
+              placeholder="-- Chọn danh mục cha --"
+              name="parent_slug"
+              isClearable={true}
+              isSearchable={true}
+              value={parentOption ? parentOption : null}
+              options={optionsCategories}
+              onChange={handleSelectedOptionCategories}
+            />
           </Form.Group>
           <Button variant="outline-primary" type="submit" className="w-100">
-            {selectedId ? "Cập nhật" : "Thêm mới"}
+            {selectedSlug ? "Cập nhật" : "Thêm mới"}
           </Button>
         </Form>
       </Modal>
@@ -412,4 +407,4 @@ const Page = () => {
   );
 };
 
-export default Page;
+export default withBase(Page);

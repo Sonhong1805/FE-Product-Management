@@ -1,15 +1,27 @@
 import withBase from "@/hocs/withBase";
+import { usePagination } from "@/hooks/usePagination";
+import { useAppDispatch } from "@/lib/hooks";
 import { ActionCreatorWithPayload } from "@reduxjs/toolkit";
-import React from "react";
 import { Pagination as PaginationBootstrap } from "react-bootstrap";
 
 interface IProps extends IWithBaseProps {
   pagination: IPagination;
-  onHandlePagination: ActionCreatorWithPayload<any, any>;
+  siblingCount: number;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  onHandlePagination: ActionCreatorWithPayload<any, string>;
 }
 
 const Pagination = (props: IProps) => {
-  const { pagination, dispatch, onHandlePagination } = props;
+  const { pagination, siblingCount = 1, onHandlePagination } = props;
+
+  const dispatch = useAppDispatch();
+  const paginationRange: (number | string)[] | undefined = usePagination({
+    siblingCount,
+    currentPage: pagination.page,
+    totalCount: pagination.totalItems,
+    pageSize: pagination.limit,
+  });
+
   return (
     <PaginationBootstrap>
       <PaginationBootstrap.First
@@ -24,15 +36,18 @@ const Pagination = (props: IProps) => {
           )
         }
       />
-      {Array.from({ length: pagination.totalPages as number }, (_, index) => {
+      {paginationRange?.map((pageNumber: number | string, index: number) => {
+        if (pageNumber === "...") {
+          return <PaginationBootstrap.Ellipsis key={index} />;
+        }
         return (
           <PaginationBootstrap.Item
-            key={index}
-            active={index + 1 === pagination.page}
+            active={pageNumber === pagination.page}
             onClick={() =>
-              dispatch(onHandlePagination({ ...pagination, page: index + 1 }))
-            }>
-            {index + 1}
+              dispatch(onHandlePagination({ ...pagination, page: pageNumber }))
+            }
+            key={index}>
+            {pageNumber}
           </PaginationBootstrap.Item>
         );
       })}
@@ -50,7 +65,7 @@ const Pagination = (props: IProps) => {
           dispatch(
             onHandlePagination({
               ...pagination,
-              page: pagination.totalPages as number,
+              page: pagination.totalPages,
             })
           )
         }

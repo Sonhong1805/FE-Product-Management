@@ -31,7 +31,6 @@ export const permissions = [
     module: permissionModule.orders,
     actions: [
       { title: "Xem", permission: permissionAll.orders.view },
-      { title: "Thêm", permission: permissionAll.orders.create },
       { title: "Sửa", permission: permissionAll.orders.update },
       { title: "Xoá", permission: permissionAll.orders.delete },
       { title: "Duyệt đơn", permission: permissionAll.orders.approved },
@@ -46,6 +45,16 @@ export const permissions = [
       { title: "Thêm", permission: permissionAll.blogs.create },
       { title: "Sửa", permission: permissionAll.blogs.update },
       { title: "Xoá", permission: permissionAll.blogs.delete },
+    ],
+  },
+  {
+    title: "Quản lý liên hệ",
+    module: permissionModule.contacts,
+    actions: [
+      { title: "Xem", permission: permissionAll.contacts.view },
+      { title: "Thêm", permission: permissionAll.contacts.create },
+      { title: "Sửa", permission: permissionAll.contacts.update },
+      { title: "Xoá", permission: permissionAll.contacts.delete },
     ],
   },
   {

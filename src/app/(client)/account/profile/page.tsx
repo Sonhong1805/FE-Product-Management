@@ -47,9 +47,6 @@ const Page = () => {
         formData.append(key, value as string);
       }
     });
-    for (let [key, value] of formData) {
-      console.log(key + ": " + value);
-    }
     const response = await AccountsService.update(userInfo._id, formData);
     if (response.success) {
       dispatch(updateUserInfo({ ...data }));

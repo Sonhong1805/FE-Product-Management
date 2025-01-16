@@ -30,6 +30,7 @@ const Page = () => {
         setValue("copyright", copyright);
       }
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [setting]);
 
   const {
@@ -195,12 +196,9 @@ const Page = () => {
               <Form.Control
                 type="file"
                 disabled={isEditable}
-                {...register("logo", { required: true })}
+                {...register("logo")}
                 onChange={handleLogoChange}
               />
-              {errors.logo && (
-                <span className="text-danger">Vui lòng thêm Logo website</span>
-              )}
             </Form.Group>
           </div>
         </div>

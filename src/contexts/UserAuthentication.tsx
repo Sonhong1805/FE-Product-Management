@@ -1,5 +1,5 @@
 "use client";
-import Loading from "@/components/Loading/Loading";
+import Loading from "@/components/Loading";
 import { saveUserInfo } from "@/lib/features/user/userSlice";
 import { useAppDispatch, useAppSelector } from "@/lib/hooks";
 import AuthService from "@/services/auth";
@@ -13,13 +13,14 @@ const UserAuthentication = ({ children }: { children: ReactNode }) => {
   const publicRoutes = [
     "/login",
     "/register",
-    "/password/forgot",
-    "/password/otp",
-    "/password/reset",
     "/",
     "/blog",
     "/about",
     "/contact",
+    "/product",
+    "/shop",
+    "/admin",
+    "/password",
   ];
 
   useEffect(() => {
@@ -32,14 +33,12 @@ const UserAuthentication = ({ children }: { children: ReactNode }) => {
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dispatch, pathname]);
+  }, []);
+
   return (
     <>
       {!isLoading ||
-      publicRoutes.includes(pathname) ||
-      pathname.startsWith("/product") ||
-      pathname.startsWith("/shop") ||
-      pathname.startsWith("/admin") ? (
+      publicRoutes.some((route) => pathname.startsWith(route)) ? (
         children
       ) : (
         <Loading />

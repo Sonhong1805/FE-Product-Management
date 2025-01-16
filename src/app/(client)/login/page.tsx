@@ -9,7 +9,7 @@ import { Button, Container, FloatingLabel, Form } from "react-bootstrap";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { BsEye, BsEyeSlash } from "react-icons/bs";
 
-const Page = (props: IWithBaseProps) => {
+const Login = (props: IWithBaseProps) => {
   const { router, dispatch, searchParams } = props;
   const [isShowPassword, setIsShowPassword] = useState(false);
   const {
@@ -36,7 +36,7 @@ const Page = (props: IWithBaseProps) => {
   };
 
   return (
-    <Container className="mt-5">
+    <Container className="py-5">
       <h1 className="text-center mb-3">Đăng nhập</h1>
       <Form
         className="m-auto"
@@ -108,4 +108,4 @@ const Page = (props: IWithBaseProps) => {
   );
 };
 
-export default withBase(Page);
+export default withBase(Login);

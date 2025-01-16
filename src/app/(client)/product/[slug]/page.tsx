@@ -1,7 +1,7 @@
 "use client";
-import Breadcrumb from "@/components/Breadcrumb/Breadcrumb";
+import Breadcrumb from "@/components/Breadcrumb";
 import Rating from "@/components/Rating/Rating";
-import Wishlist from "@/components/Wishlist/Wishlist";
+import Wishlist from "@/components/Wishlist";
 import { convertQuantity } from "@/helpers/convertQuantity";
 import { getCookie } from "@/helpers/cookie";
 import priceFormat from "@/helpers/priceFormat";
@@ -46,6 +46,7 @@ const Page = (props: IProps) => {
     return () => {
       dispatch(clearSelectedVariant());
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const thumbnailRef = useRef<HTMLDivElement | null>(null);
@@ -132,7 +133,7 @@ const Page = (props: IProps) => {
           }
         });
       } else {
-        const maxQuantity = productDetail.quantity - productDetail.sold;
+        const stock = productDetail.quantity - productDetail.sold;
         const data = {
           _id,
           cartId,
@@ -143,7 +144,7 @@ const Page = (props: IProps) => {
           price,
           discountedPrice,
           quantity,
-          maxQuantity,
+          stock,
           variant: selectedVariant,
           selected,
         };
@@ -173,7 +174,7 @@ const Page = (props: IProps) => {
   return (
     <div className="bg-body-secondary pb-5">
       <Breadcrumb title={productDetail.category?.title} href={`/shop`} />
-      <Container className="mb-3">
+      <Container className="mt-3 mb-5">
         <Row className="bg-light py-4">
           <Col xs={6}>
             <div className="d-flex gap-3">
@@ -256,16 +257,17 @@ const Page = (props: IProps) => {
                 )}
               </div>
             </div>
-            <div
-              className={`mb-3  ${
-                isExistVariant ? "bg-danger-subtle p-3" : ""
-              }`}>
-              {selectedVariant && (
-                <div className="py-2">
-                  <strong>{selectedVariant}</strong>
-                </div>
-              )}
-              <div className="d-flex flex-wrap gap-2">
+            <div className="py-2">
+              <div className="mb-2">
+                <span className="me-2">Phân loại: </span>
+                <span className={`${isExistVariant && "p-3"}`}>
+                  {selectedVariant && <strong>{selectedVariant}</strong>}
+                </span>
+              </div>
+              <div
+                className={`d-flex flex-wrap gap-2 p-2 ${
+                  isExistVariant && "bg-danger-subtle"
+                } mb-2`}>
                 {productDetail.variants.length > 0 &&
                   productDetail.variants.map((variant: IVariant) => (
                     <div key={variant._id}>
@@ -282,17 +284,15 @@ const Page = (props: IProps) => {
                       </label>
                     </div>
                   ))}
-                {isExistVariant && (
-                  <div className="text-danger">
-                    Vui lòng chọn Phân loại hàng
-                  </div>
-                )}
               </div>
+              {isExistVariant && (
+                <div className="text-danger">Vui lòng chọn Phân loại hàng</div>
+              )}
             </div>
             <div className="w-25">
               <InputGroup className="mb-3">
                 <Button
-                  variant="danger"
+                  variant="secondary"
                   id="button-addon1"
                   disabled={productDetail.quantity === 0}
                   onClick={handleDecreaseQuantity}>
@@ -309,7 +309,7 @@ const Page = (props: IProps) => {
                   onChange={handleInputQuantity}
                 />
                 <Button
-                  variant="primary"
+                  variant="secondary"
                   id="button-addon2"
                   disabled={productDetail.quantity === 0}
                   onClick={handleIncreaseQuantity}>
@@ -320,11 +320,13 @@ const Page = (props: IProps) => {
             <div className="d-flex gap-2">
               <Button
                 variant="outline-danger"
+                disabled={productDetail.quantity === 0}
                 onClick={() => handleAddToCart(false)}>
                 Thêm vào giỏ hàng
               </Button>
               <Button
-                variant="outline-danger"
+                variant="danger"
+                disabled={productDetail.quantity === 0}
                 onClick={() => handleBuyNow(true)}>
                 Mua ngay
               </Button>

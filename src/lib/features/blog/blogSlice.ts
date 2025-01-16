@@ -1,5 +1,7 @@
 import { createSlice } from "@reduxjs/toolkit";
 import { fetchBlogs } from "./blogThunk";
+import { statusOptions } from "@/options/status";
+import { topicsOptions } from "@/options/topics";
 
 const getPage =
   typeof window !== "undefined"
@@ -9,6 +11,22 @@ const getName =
   typeof window !== "undefined"
     ? new URLSearchParams(window.location.search).get("name")
     : "";
+const getStatus =
+  typeof window !== "undefined"
+    ? new URLSearchParams(window.location.search).get("status")
+    : "";
+
+const getTopic =
+  typeof window !== "undefined"
+    ? new URLSearchParams(window.location.search).get("topic")
+    : "";
+
+const findStatus = statusOptions.find((option) =>
+  option.value.includes(getStatus + "")
+);
+const findTopic = topicsOptions.find((option) =>
+  option.value.includes(getTopic + "")
+);
 
 interface IInitialState {
   isLoading: boolean;
@@ -22,16 +40,20 @@ const initialState: IInitialState = {
   data: [],
   selectedIds: [],
   pagination: {
-    limit: 12,
+    limit: 5,
     page: getPage ? +getPage : 1,
     totalItems: 0,
     totalPages: 0,
   },
   queries: {
     keywords: getName ? getName : "",
-    filter: {
-      label: "",
-      value: "",
+    topic: {
+      label: getTopic && findTopic ? findTopic.label : "",
+      value: getTopic && findTopic ? findTopic.value : "",
+    },
+    status: {
+      label: getStatus && findStatus ? findStatus.label : "",
+      value: getStatus && findStatus ? findStatus.value : "",
     },
   },
 };
@@ -49,7 +71,11 @@ export const blogSlice = createSlice({
     resetQueries: (state) => {
       state.queries = {
         keywords: "",
-        filter: {
+        topic: {
+          label: "",
+          value: "",
+        },
+        status: {
           label: "",
           value: "",
         },

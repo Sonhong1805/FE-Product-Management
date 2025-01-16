@@ -62,8 +62,8 @@ type IProductQueries = {
   priceTo: number;
   priceFrom: number;
   categorySlug?: string[];
-  filter: Option | null;
+  filter?: Option | null;
   colors?: string[];
   tags?: string[];
-  label?: string;
+  sort?: Option | null;
 };

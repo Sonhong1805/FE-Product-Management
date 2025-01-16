@@ -3,7 +3,11 @@ import RatingItems from "./RatingItems";
 import ReactPaginate from "react-paginate";
 import { Pagination } from "react-bootstrap";
 
-const RatingPagination = ({ itemsPerPage, items }: any) => {
+interface IProps {
+  itemsPerPage: number;
+  items: IRating[];
+}
+const RatingPagination = ({ itemsPerPage, items }: IProps) => {
   const [itemOffset, setItemOffset] = useState(0);
   const endOffset = itemOffset + itemsPerPage;
   const currentItems = items.slice(itemOffset, endOffset);

@@ -1,5 +1,5 @@
 import { createRatings } from "@/lib/features/productDetail/productDetailThunk";
-import { useAppDispatch, useAppSelector } from "@/lib/hooks";
+import { useAppSelector } from "@/lib/hooks";
 import React, { useState } from "react";
 import { Button, Container, Form, Row } from "react-bootstrap";
 import { SubmitHandler, useForm } from "react-hook-form";
@@ -111,7 +111,8 @@ const Rating = (props: IWithBaseProps) => {
       </Row>
       <Row className="bg-light py-2 ps-2 pe-3">
         <h4 className="mb-3">
-          ({ratings.length}) đánh giá cho <em>"{productDetail.title}"</em>
+          ({ratings.length}) đánh giá cho{" "}
+          <em>&quot; {productDetail.title} &quot;</em>
         </h4>
         <RatingPagination itemsPerPage={4} items={ratings} />
       </Row>

@@ -1,15 +1,17 @@
 import { nested } from "@/helpers/createNested";
 import withBase from "@/hocs/withBase";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import SidebarNested from "../Sidebar/SidebarNested";
 import CategoriesService from "@/services/categories";
 import {
   handleCategoriesSlug,
   handleCategorySlug,
+  handleQueries,
   resetQueries,
   updatedCategorySlug,
 } from "@/lib/features/product/productSlice";
 import { saveParentCategories } from "@/lib/features/category/categorySlice";
+import { useAppSelector } from "@/lib/hooks";
 
 interface IProps extends IWithBaseProps {
   categorySlug: string | undefined;
@@ -21,6 +23,7 @@ const FilterCategory = (props: IProps) => {
     {}
   );
   const [categories, setCategories] = useState<ICategory[]>([]);
+  const queries = useAppSelector((state) => state.products.queries);
 
   useEffect(() => {
     (async () => {
@@ -30,6 +33,16 @@ const FilterCategory = (props: IProps) => {
         setCategories(nestedData);
         dispatch(resetQueries());
         dispatch(saveParentCategories(response.parentCategories));
+        dispatch(
+          handleQueries({
+            keywords: queries.keywords,
+            priceFrom: queries.priceFrom,
+            priceTo: queries.priceTo,
+            colors: queries.colors,
+            tags: queries.tags,
+            sort: queries.sort,
+          })
+        );
         if (searchParams.get("categories")) {
           const allCategoriesSlug = searchParams
             .get("categories")
@@ -41,6 +54,7 @@ const FilterCategory = (props: IProps) => {
         }
       }
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categorySlug]);
 
   const handleToggleItem = (slug: string) => {
@@ -57,21 +71,29 @@ const FilterCategory = (props: IProps) => {
       await dispatch(handleCategorySlug(slug));
     }
   };
+
+  const memoizedCategories = useMemo(
+    () =>
+      categories.map((category) => (
+        <SidebarNested
+          item={category}
+          expandedItems={expandedItems}
+          onHandleToggleItem={handleToggleItem}
+          key={category._id}
+          onHandleFilterCategory={handleFilterCategory}
+        />
+      )),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [categories, expandedItems]
+  );
+
   return (
     <div className="mb-3 border-bottom pb-3">
       <div className="mb-2">
         <span className="fw-bold">Tất cả danh mục</span>
       </div>
       <ul className="nav-side p-0 m-0" style={{ listStyle: "none" }}>
-        {categories.map((category: ICategory) => (
-          <SidebarNested
-            item={category}
-            expandedItems={expandedItems}
-            onHandleToggleItem={handleToggleItem}
-            key={category._id}
-            onHandleFilterCategory={handleFilterCategory}
-          />
-        ))}
+        {memoizedCategories}
       </ul>
     </div>
   );

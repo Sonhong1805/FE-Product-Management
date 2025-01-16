@@ -1,6 +1,7 @@
 "use client";
 import { getCookie } from "@/helpers/cookie";
 import priceFormat from "@/helpers/priceFormat";
+import withBase from "@/hocs/withBase";
 import {
   deleteProductInCart,
   selectedIdsChanged,
@@ -12,20 +13,18 @@ import { useAppSelector } from "@/lib/hooks";
 import CartsService from "@/services/carts";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import React, { useEffect, useRef } from "react";
 import { Button, Container, Form, InputGroup, Table } from "react-bootstrap";
 import { BsArrowLeftCircle } from "react-icons/bs";
+import { FiMinus, FiPlus } from "react-icons/fi";
 import { MdOutlinePayments } from "react-icons/md";
 import { TfiTrash } from "react-icons/tfi";
-import { useDispatch } from "react-redux";
 import Swal from "sweetalert2";
 
-const Page = () => {
-  const dispatch = useDispatch();
-  const router = useRouter();
+const Page = (props: IWithBaseProps) => {
+  const { router, dispatch } = props;
   const productsInCart =
-    useAppSelector((state) => state.user.userInfo?.cart.products) || [];
+    useAppSelector((state) => state.user.userInfo?.cart?.products) || [];
   const selectedIds = useAppSelector((state) => state.user.selectedIds);
   const isFirstRender = useRef(true);
 
@@ -46,14 +45,20 @@ const Page = () => {
     (async () => {
       await CartsService.selected(cartId, selectedIds, "change");
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedIds]);
 
-  const handleUpdateProductInCart = async (
+  const handleUpdateProductInCart = (
     _id: string,
     type: "plus" | "minus" | "input",
-    quantity: number
+    quantity: number,
+    stock: number
   ) => {
-    await dispatch(updateCart({ cartId, _id, type, quantity }) as any);
+    if (quantity >= stock) {
+      dispatch(updateCart({ cartId, _id, type, quantity: stock }));
+    } else {
+      dispatch(updateCart({ cartId, _id, type, quantity }));
+    }
   };
 
   const handleDeleteProductInCart = async (id: string) => {
@@ -139,166 +144,181 @@ const Page = () => {
   return (
     <div className="bg-body-secondary py-3">
       <Container>
-        <Table striped bordered hover className="caption-top">
-          <caption>Giỏ hàng của tôi</caption>
-          <thead className="table-info">
-            <tr>
-              <th>
-                <Form.Check
-                  type={"checkbox"}
-                  checked={
-                    selectedIds.length > 0 &&
-                    selectedIds.length === productsInCart.length
-                  }
-                  onChange={() => dispatch(seletedIdsChangedAll())}
-                />
-              </th>
-              <th style={{ maxWidth: "300px" }}>Tên sản phẩm</th>
-              <th>Hình ảnh</th>
-              <th>Giá (VNĐ)</th>
-              <th>Số lượng</th>
-              <th>Tổng</th>
-              <th style={{ maxWidth: "60px" }}>Hành động</th>
-            </tr>
-          </thead>
-          <tbody>
-            {productsInCart.length ? (
-              productsInCart.map((product: TProductInCart) => (
-                <tr key={product._id}>
-                  <td>
+        {productsInCart.length ? (
+          <>
+            <Table striped bordered hover className="caption-top">
+              <caption>Giỏ hàng của tôi</caption>
+              <thead className="table-info">
+                <tr>
+                  <th>
                     <Form.Check
                       type={"checkbox"}
-                      checked={selectedIds.includes(product._id)}
-                      onChange={() => dispatch(selectedIdsChanged(product._id))}
+                      checked={
+                        selectedIds.length > 0 &&
+                        selectedIds.length === productsInCart.length
+                      }
+                      onChange={() => dispatch(seletedIdsChangedAll())}
                     />
-                  </td>
-                  <td
-                    className="product-container"
-                    style={{ maxWidth: "300px" }}>
-                    <Link
-                      href={"/product/" + product.slug}
-                      className="product__title">
-                      {product.title}
-                    </Link>
-                    {product.variant && (
-                      <div>
-                        <strong>Loại:</strong> {product.variant}
-                      </div>
-                    )}
-                  </td>
-                  <td>
-                    <Image
-                      src={product.thumbnail + "" || "/image/no-image.png"}
-                      width={80}
-                      height={80}
-                      alt={product.title}
-                    />
-                  </td>
-                  <td>
-                    <div className="text-dark text-semibold text-price">
-                      {priceFormat(product.discountedPrice)}
-                    </div>
-                  </td>
-                  <td style={{ maxWidth: "100px" }}>
-                    <InputGroup className="mb-3">
-                      <Button
-                        variant="danger"
-                        id="button-addon1"
-                        disabled={product.maxQuantity === 0}
-                        onClick={() =>
-                          handleUpdateProductInCart(
-                            product._id,
-                            "minus",
-                            product.quantity
-                          )
-                        }>
-                        -
-                      </Button>
-                      <Form.Control
-                        aria-label="Example text with button addon"
-                        aria-describedby="basic-addon1"
-                        className="w-25"
-                        min={1}
-                        max={product?.maxQuantity}
-                        disabled={product.maxQuantity === 0}
-                        value={product.quantity}
-                        onChange={(e) =>
-                          handleUpdateProductInCart(
-                            product._id,
-                            "input",
-                            +e.target.value
-                          )
+                  </th>
+                  <th style={{ maxWidth: "300px" }}>Tên sản phẩm</th>
+                  <th>Hình ảnh</th>
+                  <th>Giá (VNĐ)</th>
+                  <th>Số lượng</th>
+                  <th>Tổng</th>
+                  <th>Hành động</th>
+                </tr>
+              </thead>
+              <tbody>
+                {productsInCart.map((product: TProductInCart) => (
+                  <tr key={product._id}>
+                    <td>
+                      <Form.Check
+                        type={"checkbox"}
+                        checked={selectedIds.includes(product._id)}
+                        onChange={() =>
+                          dispatch(selectedIdsChanged(product._id))
                         }
                       />
+                    </td>
+                    <td
+                      className="product-container"
+                      style={{ maxWidth: "300px" }}>
+                      <Link
+                        href={"/product/" + product.slug}
+                        className="product__title">
+                        {product.title}
+                      </Link>
+                      {product.variant && (
+                        <div>
+                          <strong>Loại:</strong> {product.variant}
+                        </div>
+                      )}
+                    </td>
+                    <td>
+                      <Image
+                        src={product.thumbnail + "" || "/image/no-image.png"}
+                        width={80}
+                        height={80}
+                        alt={product.title}
+                      />
+                    </td>
+                    <td>
+                      <div className="text-dark text-semibold text-price">
+                        {priceFormat(product.discountedPrice)}
+                      </div>
+                    </td>
+                    <td style={{ maxWidth: "100px" }}>
+                      <InputGroup className="mb-3">
+                        <Button
+                          variant="secondary"
+                          id="button-addon1"
+                          disabled={product.stock === 0}
+                          onClick={() =>
+                            handleUpdateProductInCart(
+                              product._id,
+                              "minus",
+                              product.quantity,
+                              product.stock
+                            )
+                          }>
+                          <FiMinus />
+                        </Button>
+                        <Form.Control
+                          aria-label="Example text with button addon"
+                          aria-describedby="basic-addon1"
+                          className="w-25"
+                          min={1}
+                          max={product.stock}
+                          disabled={product.stock === 0}
+                          value={product.quantity}
+                          onChange={(e) =>
+                            handleUpdateProductInCart(
+                              product._id,
+                              "input",
+                              +e.target.value,
+                              product.stock
+                            )
+                          }
+                        />
+                        <Button
+                          variant="secondary"
+                          id="button-addon2"
+                          onClick={() =>
+                            handleUpdateProductInCart(
+                              product._id,
+                              "plus",
+                              product.quantity,
+                              product.stock
+                            )
+                          }>
+                          <FiPlus />
+                        </Button>
+                      </InputGroup>
+                    </td>
+                    <td className="text-end">
+                      <div className="text-danger text-semibold text-price">
+                        {priceFormat(
+                          product.discountedPrice * product.quantity
+                        )}
+                      </div>
+                    </td>
+                    <td className="text-center ">
                       <Button
-                        variant="primary"
-                        id="button-addon2"
-                        onClick={() =>
-                          handleUpdateProductInCart(
-                            product._id,
-                            "plus",
-                            product.quantity
-                          )
-                        }>
-                        +
+                        variant="outline-danger"
+                        className="m-auto"
+                        onClick={() => handleDeleteProductInCart(product._id)}>
+                        <TfiTrash />
                       </Button>
-                    </InputGroup>
-                  </td>
-                  <td className="text-end">
-                    <div className="text-danger text-semibold text-price">
-                      {priceFormat(product.discountedPrice * product.quantity)}
-                    </div>
-                  </td>
-                  <td className="text-center ">
-                    <Button
-                      variant="outline-danger"
-                      className="m-auto"
-                      onClick={() => handleDeleteProductInCart(product._id)}>
-                      <TfiTrash />
-                    </Button>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr className="text-center">
-                <td colSpan={7}>Chưa có sản phẩm nào trong giỏ hàng</td>
-              </tr>
-            )}
-          </tbody>
-        </Table>
-        <div className="mb-5 d-flex justify-content-between align-items-center">
-          <div className="d-flex gap-2">
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+            <div className="mb-5 d-flex justify-content-between align-items-center">
+              <div className="d-flex gap-2">
+                <Button
+                  variant="outline-secondary"
+                  className="d-flex gap-2 align-items-center"
+                  onClick={() => router.push("/shop")}>
+                  <BsArrowLeftCircle /> <span>Tiếp tục mua sắm</span>
+                </Button>
+                <Button
+                  variant="outline-danger"
+                  className="d-flex gap-2 align-items-center"
+                  onClick={handleDeletedSelectedIds}>
+                  <TfiTrash /> <span>Xoá ({selectedIds.length})</span>
+                </Button>
+              </div>
+              <div className="d-flex gap-3 align-items-end">
+                <span>
+                  Tổng thanh toán ({selectedIds.length} Sản phẩm):{" "}
+                  <strong className="text-danger" style={{ fontSize: "20px" }}>
+                    {priceFormat(totalPrice)}
+                  </strong>
+                </span>
+                <Button
+                  variant="outline-success"
+                  className="d-flex gap-2 align-items-center"
+                  onClick={handleOrder}>
+                  <MdOutlinePayments /> <span>Mua hàng</span>
+                </Button>
+              </div>
+            </div>
+          </>
+        ) : (
+          <h3 className="text-center py-5">
+            <span>Chưa có sản phẩm nào trong giỏ hàng</span>
             <Button
               variant="outline-secondary"
-              className="d-flex gap-2 align-items-center"
+              className="d-flex gap-2 align-items-center mt-3 m-auto"
               onClick={() => router.push("/shop")}>
-              <BsArrowLeftCircle /> <span>Tiếp tục mua hàng</span>
+              <BsArrowLeftCircle /> <span>Tiếp tục mua sắm</span>
             </Button>
-            <Button
-              variant="outline-danger"
-              className="d-flex gap-2 align-items-center"
-              onClick={handleDeletedSelectedIds}>
-              <TfiTrash /> <span>Xoá ({selectedIds.length})</span>
-            </Button>
-          </div>
-          <div className="d-flex gap-3 align-items-end">
-            <span>
-              Tổng thanh toán ({selectedIds.length} Sản phẩm):{" "}
-              <strong className="text-danger" style={{ fontSize: "20px" }}>
-                {priceFormat(totalPrice)}
-              </strong>
-            </span>
-            <Button
-              variant="outline-success"
-              className="d-flex gap-2 align-items-center"
-              onClick={handleOrder}>
-              <MdOutlinePayments /> <span>Mua hàng</span>
-            </Button>
-          </div>
-        </div>
+          </h3>
+        )}
       </Container>
     </div>
   );
 };
 
-export default Page;
+export default withBase(Page);

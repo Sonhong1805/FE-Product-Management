@@ -1,4 +1,3 @@
-"use client";
 import withBase from "@/hocs/withBase";
 import { handleTags, resetQueries } from "@/lib/features/product/productSlice";
 import { useAppSelector } from "@/lib/hooks";

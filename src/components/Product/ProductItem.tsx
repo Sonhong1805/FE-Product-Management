@@ -3,7 +3,7 @@ import priceFormat from "@/helpers/priceFormat";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import React from "react";
+import React, { memo } from "react";
 import { BsCart3, BsStarFill } from "react-icons/bs";
 
 const ProductItem = ({ product }: { product: IProduct }) => {
@@ -22,41 +22,40 @@ const ProductItem = ({ product }: { product: IProduct }) => {
           <div></div>
         )}
       </div>
-      <div className="product__image-container">
+      <div
+        className="product__image-container"
+        onClick={() => router.push(`/product/${product.slug}`)}>
         <Image
           src={product.thumbnail + "" || "/image/no-image.png"}
-          alt={product.slug}
+          alt={product.title}
           width={223}
           height={223}
-          quality={100}
-          priority={true}
+          priority
           style={{
-            width: "100%",
-            height: "auto",
+            width: "223px",
+            height: "223px",
             objectFit: "cover",
           }}
           className="product__image"
         />
         <div className="product__overlay">
-          <BsCart3
-            size={30}
-            cursor={"pointer"}
-            className="text-light"
-            onClick={() => router.push(`/product/${product.slug}`)}
-          />
+          <BsCart3 size={30} cursor={"pointer"} className="text-light" />
         </div>
       </div>
       <div className="product__content">
-        <Link href={"/product/" + product.slug} className="product__title">
+        <Link
+          href={"/product/" + product.slug}
+          className="product__title"
+          prefetch={true}>
           {product.title}
         </Link>
-        <div className="product__pricing">
+        <div className="product__pricing justify-content-between">
           {product.discount ? (
             <div className="product__price">{priceFormat(product.price)}</div>
           ) : (
-            <></>
+            <div></div>
           )}
-          <div className="product__discounted-price">
+          <div className="product__discounted-price ">
             {priceFormat(product.discountedPrice)}
           </div>
         </div>
@@ -80,4 +79,4 @@ const ProductItem = ({ product }: { product: IProduct }) => {
   );
 };
 
-export default ProductItem;
+export default memo(ProductItem);

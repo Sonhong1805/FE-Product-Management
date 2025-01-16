@@ -10,11 +10,12 @@ import React, {
   useState,
 } from "react";
 import { Button, Container, Form } from "react-bootstrap";
+import Swal from "sweetalert2";
 
 const Page = () => {
   const router = useRouter();
   const [otp, setOtp] = useState<string[]>(new Array(6).fill(""));
-  const inputRefs = useRef<any>([]);
+  const inputRefs = useRef<HTMLInputElement[]>([]);
   const [combineOtp, setCombineOtp] = useState<string>("");
   const [errorOtp, setErrorOtp] = useState<boolean>(false);
 
@@ -34,6 +35,13 @@ const Page = () => {
     const response = await AuthService.otpPassword(email, combineOtp);
     if (response.success) {
       router.push("/password/reset");
+    } else {
+      Swal.fire({
+        icon: "error",
+        title: response?.message,
+        showConfirmButton: false,
+        timer: 2000,
+      });
     }
   };
 
@@ -84,13 +92,13 @@ const Page = () => {
   };
 
   return (
-    <Container className="mt-5">
+    <Container className="py-5">
       <h1 className="text-center mb-3">Xác nhận mã OTP</h1>
       <div
         style={{ maxWidth: "480px", cursor: "pointer" }}
         className="text-end m-auto px-2"
         onClick={handleSendBackOtp}>
-        <span>Gửi lại</span>
+        <span className="text-danger">Gửi lại</span>
       </div>
       <Form
         className="m-auto"
@@ -100,15 +108,21 @@ const Page = () => {
           {otp.map((item, index) => (
             <Form.Control
               key={index}
-              ref={(input: any) => (inputRefs.current[index] = input)}
+              ref={(input: HTMLInputElement) => {
+                if (input) inputRefs.current[index] = input;
+              }}
               type="text"
               id={item}
               className="m-2 text-center rounded"
               maxLength={1}
               style={{ height: "50px", fontSize: "23px" }}
-              onChange={(e: any) => handleChange(index, e)}
+              onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                handleChange(index, e)
+              }
               onClick={() => handleClick(index)}
-              onKeyDown={(e: any) => handleKeyDown(index, e)}
+              onKeyDown={(e: KeyboardEvent<HTMLInputElement>) =>
+                handleKeyDown(index, e)
+              }
             />
           ))}
         </Form.Group>

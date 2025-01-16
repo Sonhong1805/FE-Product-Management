@@ -1,5 +1,4 @@
 "use client";
-import { useAppDispatch } from "@/lib/hooks";
 import AuthService from "@/services/auth";
 import { useRouter } from "next/navigation";
 import React from "react";
@@ -8,7 +7,6 @@ import { SubmitHandler, useForm } from "react-hook-form";
 
 const Page = () => {
   const router = useRouter();
-  const dispatch = useAppDispatch();
   const {
     register,
     handleSubmit,
@@ -23,7 +21,7 @@ const Page = () => {
   };
 
   return (
-    <Container className="mt-5">
+    <Container className="py-5">
       <h1 className="text-center mb-3">Quên mật khẩu</h1>
       <Form
         className="m-auto"

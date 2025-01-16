@@ -1,13 +1,19 @@
 "use client";
 import priceFormat from "@/helpers/priceFormat";
 import withBase from "@/hocs/withBase";
-import { useAppSelector } from "@/lib/hooks";
 import ProductsService from "@/services/products";
 import VariantsService from "@/services/variants";
 import moment from "moment";
 import Image from "next/image";
-import React, { useEffect, useRef, useState } from "react";
-import { Badge, Button, Container, Form, Table } from "react-bootstrap";
+import React, { ChangeEvent, useEffect, useRef, useState } from "react";
+import {
+  Badge,
+  Button,
+  Container,
+  Form,
+  InputGroup,
+  Table,
+} from "react-bootstrap";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { BiExit } from "react-icons/bi";
 import { TfiTrash } from "react-icons/tfi";
@@ -20,16 +26,33 @@ const Page = (props: IWithBaseProps) => {
     register,
     handleSubmit,
     setValue,
-    getValues,
     watch,
     reset,
     formState: { errors },
   } = useForm<IVariant>({});
   const [thumbnailPreview, setThumbnailPreview] = useState("");
   const [variants, setVariants] = useState<IVariant[]>([]);
+  const [priceFormatted, setPriceFormatted] = useState<string>("");
 
   const initialPrice = useRef(0);
   const initialDiscount = useRef(0);
+
+  const thumbnailRef = useRef<HTMLDivElement | null>(null);
+  const viewerInstanceRef = useRef<Viewer | null>(null);
+  useEffect(() => {
+    let Viewer;
+    import("viewerjs").then((module) => {
+      Viewer = module.default;
+
+      if (thumbnailRef.current) {
+        viewerInstanceRef.current = new Viewer(thumbnailRef.current, {});
+      }
+    });
+
+    return () => {
+      if (viewerInstanceRef.current) viewerInstanceRef.current.destroy();
+    };
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -45,6 +68,8 @@ const Page = (props: IWithBaseProps) => {
           initialPrice.current = price;
           initialDiscount.current = discount;
           setValue("price", price);
+          const formattedValue = new Intl.NumberFormat("en-DE").format(price);
+          setPriceFormatted(formattedValue);
           setValue("discount", discount);
         }
         if (variantsResponse.success && variantsResponse.data) {
@@ -57,6 +82,7 @@ const Page = (props: IWithBaseProps) => {
     };
 
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const onSubmit: SubmitHandler<IVariant> = async (data: IVariant) => {
@@ -116,7 +142,7 @@ const Page = (props: IWithBaseProps) => {
     }
   };
 
-  const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleThumbnailChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const previewUrl = URL.createObjectURL(file);
@@ -129,9 +155,12 @@ const Page = (props: IWithBaseProps) => {
     reset({
       name: "",
       thumbnail: "",
-      price: initialPrice.current,
       discount: initialDiscount.current,
     });
+    const formattedValue = new Intl.NumberFormat("en-DE").format(
+      initialPrice.current
+    );
+    setPriceFormatted(formattedValue);
   };
 
   const handleEditVariant = (variant: IVariant) => {
@@ -202,32 +231,53 @@ const Page = (props: IWithBaseProps) => {
             </Form.Group>
             <div className="d-flex mb-3 gap-3 flex-wrap">
               <Form.Group
-                className="flex-fill"
+                className="flex-fill mb-3"
                 controlId="exampleForm.ControlInput1">
-                <Form.Label>Giá (VNĐ)</Form.Label>
-                <Form.Control
-                  type="number"
-                  min={0}
-                  defaultValue={getValues("price")}
-                  placeholder="Nhập giá sản phẩm"
-                  {...register("price", {
-                    valueAsNumber: true,
-                  })}
-                />
+                <Form.Label>Giá gốc</Form.Label>
+                <InputGroup>
+                  <Form.Control
+                    value={priceFormatted}
+                    placeholder="Nhập giá sản phẩm"
+                    {...register("price", {
+                      setValueAs: (value) => {
+                        const stringValue = String(value || "");
+                        return Number(stringValue.replace(/\D/g, ""));
+                      },
+                      onChange: (e) => {
+                        const rawValue = e.target.value.replace(/\D/g, "");
+                        const formattedValue = new Intl.NumberFormat(
+                          "en-DE"
+                        ).format(Number(rawValue));
+                        setPriceFormatted(formattedValue);
+                      },
+                    })}
+                  />
+                  <InputGroup.Text id="basic-addon2">VND</InputGroup.Text>
+                </InputGroup>
               </Form.Group>
               <Form.Group
                 className="flex-fill"
                 controlId="exampleForm.ControlInput1">
-                <Form.Label>Phần trăm giảm giá (??%)</Form.Label>
-                <Form.Control
-                  type="number"
-                  min={0}
-                  defaultValue={getValues("discount")}
-                  placeholder="Nhập phần trăm giảm giá"
-                  {...register("discount", {
-                    valueAsNumber: true,
-                  })}
-                />
+                <Form.Label>Phần trăm giảm giá</Form.Label>
+                <InputGroup>
+                  <Form.Control
+                    type="number"
+                    min={0}
+                    max={100}
+                    placeholder="Nhập phần trăm giảm giá"
+                    {...register("discount", {
+                      valueAsNumber: true,
+                      onChange: (e) => {
+                        const value = Math.min(
+                          Math.max(Number(e.target.value), 0),
+                          100
+                        );
+                        setValue("discount", value);
+                      },
+                    })}
+                  />
+                  <InputGroup.Text id="basic-addon2">%</InputGroup.Text>
+                </InputGroup>
               </Form.Group>
             </div>
             <Form.Group className="mb-4" controlId="exampleForm.ControlInput1">
@@ -257,11 +307,11 @@ const Page = (props: IWithBaseProps) => {
               </Button>
             </Form.Group>
           </div>
-          <div className="w-50">
+          <div className="w-50" ref={thumbnailRef}>
             <Image
               src={thumbnailPreview || "/image/no-image.png"}
-              width={200}
-              height={200}
+              width={218}
+              height={218}
               alt="thumbnail"
               priority={true}
               style={{ objectFit: "contain" }}
@@ -301,14 +351,20 @@ const Page = (props: IWithBaseProps) => {
                     src={variant.thumbnail + "" || "/image/no-image.png"}
                     width={80}
                     height={80}
+                    priority
                     alt={variant.name}
+                    style={{ objectFit: "contain" }}
                   />
                 </td>
                 <td>
-                  <span className="text-decoration-line-through text-secondary">
-                    {priceFormat(variant.price)}
-                  </span>{" "}
-                  <span>(-{variant.discount}%)</span>
+                  {variant.discount !== 0 && (
+                    <>
+                      <span className="text-decoration-line-through text-secondary">
+                        {priceFormat(variant.price)}
+                      </span>{" "}
+                      <span>(-{variant.discount}%)</span>
+                    </>
+                  )}
                   <div className="text-danger text-semibold text-price">
                     {priceFormat(variant.discountedPrice)}
                   </div>

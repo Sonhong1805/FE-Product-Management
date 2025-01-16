@@ -16,7 +16,6 @@ export const permissionAll: IPermissionAll = {
   },
   orders: {
     view: "orders_view",
-    create: "orders_create",
     update: "orders_update",
     delete: "orders_delete",
     approved: "orders_approved",
@@ -27,6 +26,12 @@ export const permissionAll: IPermissionAll = {
     create: "blogs_create",
     update: "blogs_update",
     delete: "blogs_delete",
+  },
+  contacts: {
+    view: "contacts_view",
+    create: "contacts_create",
+    update: "contacts_update",
+    delete: "contacts_delete",
   },
   accounts: {
     view: "accounts_view",
@@ -56,6 +61,7 @@ export const permissionModule: IPermissionModule = {
   products: "products",
   orders: "orders",
   blogs: "blogs",
+  contacts: "contacts",
   accounts: "accounts",
   roles: "roles",
   permissions: "permissions",

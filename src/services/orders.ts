@@ -1,13 +1,15 @@
 import axios from "../customs/axios-customize";
 
 const OrdersService = {
-  index: (params: Record<string, any>): Promise<IResponse<IOrder[]>> => {
+  index: (
+    params: Record<string, string | number | boolean>
+  ): Promise<IResponse<IOrder[]>> => {
     return axios.get("/orders", { params });
   },
   detailByUserId: (userId: string): Promise<IResponse<IOrder[]>> => {
     return axios.get(`/orders/user/${userId}`);
   },
-  detail: (id: string): Promise<IResponse<IOrder[]>> => {
+  detail: (id: string): Promise<IResponse<IOrder>> => {
     return axios.get(`/orders/${id}`);
   },
 

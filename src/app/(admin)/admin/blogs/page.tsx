@@ -1,6 +1,5 @@
 "use client";
 import withBase from "@/hocs/withBase";
-import { adminBlogsFilteredOptions } from "@/options/filter";
 import moment from "moment";
 import React, { useEffect, useState } from "react";
 import {
@@ -19,7 +18,7 @@ import { TiEdit } from "react-icons/ti";
 import Select, { SingleValue } from "react-select";
 import Swal from "sweetalert2";
 import BlogsService from "@/services/blogs";
-import { adminBlogsFeaturedOptions } from "@/options/featured";
+import { featuredOptions } from "@/options/feature";
 import Image from "next/image";
 import { useAppSelector } from "@/lib/hooks";
 import Pagination from "@/components/Pagination";
@@ -32,7 +31,10 @@ import {
   updateFeature,
 } from "@/lib/features/blog/blogSlice";
 import { fetchBlogs } from "@/lib/features/blog/blogThunk";
-import Loading from "@/components/Loading/Loading";
+import Loading from "@/components/Loading";
+import { topicsOptions } from "@/options/topics";
+import { statusOptions } from "@/options/status";
+import setOrDeleteParam from "@/helpers/setOrDeleteParam";
 
 const Page = (props: IWithBaseProps) => {
   const userPermissions = useAppSelector(
@@ -44,66 +46,48 @@ const Page = (props: IWithBaseProps) => {
   const pagination = useAppSelector((state) => state.blogs.pagination);
   const queries = useAppSelector((state) => state.blogs.queries);
   const [loading, setLoading] = useState<boolean>(false);
-  const selectedIds = useAppSelector((state) => state.products.selectedIds);
+  const selectedIds = useAppSelector((state) => state.blogs.selectedIds);
+
+  const fetchBlogsData = async () => {
+    await dispatch(
+      fetchBlogs({
+        page: pagination.page,
+        limit: pagination.limit,
+        ...(queries.keywords && { title: queries.keywords }),
+        ...(queries.topic !== null && queries.topic?.value
+          ? {
+              topic: queries.topic?.value,
+            }
+          : {}),
+        ...(queries.status !== null && queries.status?.value
+          ? {
+              [queries.status?.value?.split(",")[0]]:
+                queries.status?.value?.split(",")[1],
+            }
+          : {}),
+      })
+    );
+  };
 
   useEffect(() => {
     const params = new URLSearchParams(searchParams.toString());
-    const setOrDeleteParam = (
-      key: string,
-      value: string | number | boolean
-    ) => {
-      if (value) {
-        params.set(key, value.toString());
-      } else {
-        params.delete(key);
-      }
-    };
+    setOrDeleteParam(params, "page", pagination.page);
+    setOrDeleteParam(params, "name", queries.keywords);
+    setOrDeleteParam(
+      params,
+      "status",
+      queries.status?.value && queries.status?.value.split(",")[1]
+    );
+    setOrDeleteParam(params, "topic", queries.topic && queries.topic?.value);
 
-    setOrDeleteParam("page", pagination.page);
-    setOrDeleteParam("name", queries.keywords);
-
-    const storageParamsKey = localStorage
-      .getItem("blogFilterValue")
-      ?.split(",")[0] as string;
-
-    if (queries.filter && queries.filter.value) {
-      const filterLabel = queries.filter.label;
-      const filterValue = queries.filter.value;
-      const [filterKey] = queries.filter.value.split(",");
-      if (filterKey !== storageParamsKey) {
-        params.delete(storageParamsKey);
-        params.set(filterKey, filterLabel);
-        localStorage.setItem("blogFilterValue", filterValue);
-        localStorage.setItem("blogFilterLabel", filterLabel);
-      } else {
-        params.set(filterKey, filterLabel);
-        localStorage.setItem("blogFilterValue", filterValue);
-        localStorage.setItem("blogFilterLabel", filterLabel);
-      }
-    } else {
-      params.delete(storageParamsKey);
-      localStorage.removeItem("blogFilterValue");
-      localStorage.removeItem("blogFilterLabel");
-    }
-
-    (async () => {
-      setLoading(true);
-      await dispatch(
-        fetchBlogs({
-          page: pagination.page,
-          limit: pagination.limit,
-          ...(queries.keywords && { title: queries.keywords }),
-          ...(queries.filter !== null
-            ? {
-                [queries.filter?.value?.split(",")[0]]:
-                  queries.filter?.value?.split(",")[1],
-              }
-            : {}),
-        })
-      );
+    setLoading(true);
+    const delayDebounce = setTimeout(async () => {
+      fetchBlogsData();
       setLoading(false);
-    })();
-    router.push(pathname + "?" + params.toString());
+      router.push(pathname + "?" + params.toString());
+    }, 1000);
+    return () => clearTimeout(delayDebounce);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queries, pagination.page]);
 
   const handleChangeOptionsFeatured = (option: Option | null) => {
@@ -167,37 +151,14 @@ const Page = (props: IWithBaseProps) => {
     data: IBlogsQueries
   ) => {
     dispatch(handlePagination({ ...pagination, page: 1 }));
-    const filterKey = localStorage
-      .getItem("blogFilterValue")
-      ?.split(",")[0] as string;
-    if (!data.filter || !data.filter.value) {
-      if (filterKey) {
-        dispatch(
-          handleQueries({
-            ...queries,
-            filter: {
-              value: "",
-              label: "",
-            },
-          })
-        );
-      } else {
-        dispatch(
-          handleQueries({
-            ...queries,
-            keywords: data.keywords,
-          })
-        );
-      }
-    } else {
-      dispatch(
-        handleQueries({
-          ...queries,
-          keywords: data.keywords,
-          filter: data.filter,
-        })
-      );
-    }
+    dispatch(
+      handleQueries({
+        ...queries,
+        keywords: data.keywords,
+        topic: data.topic,
+        status: data.status,
+      })
+    );
   };
 
   return (
@@ -220,7 +181,7 @@ const Page = (props: IWithBaseProps) => {
         id="uncontrolled-tab-example"
         className="mb-3">
         <Tab eventKey="search" title="Tìm kiếm">
-          <Form className="d-flex w-50" onSubmit={handleSubmit(onSubmit)}>
+          <Form className="d-flex w-75" onSubmit={handleSubmit(onSubmit)}>
             <Form.Group className="me-2 flex-fill">
               <Form.Control
                 type="text"
@@ -231,15 +192,29 @@ const Page = (props: IWithBaseProps) => {
             <Select
               className="basic-single me-2"
               classNamePrefix="select"
-              placeholder="-- Chọn trạng thái --"
-              name="filter"
+              placeholder="-- Chọn chủ đề --"
+              name="topic"
               isClearable={true}
               defaultValue={
-                queries.filter && queries.filter.value ? queries.filter : null
+                queries.topic && queries.topic.value ? queries.topic : null
               }
-              options={adminBlogsFilteredOptions}
+              options={topicsOptions}
               onChange={(option: SingleValue<Option>) =>
-                setValue("filter", option as Option)
+                setValue("topic", option as Option)
+              }
+            />
+            <Select
+              className="basic-single me-2"
+              classNamePrefix="select"
+              placeholder="-- Chọn trạng thái --"
+              name="status"
+              isClearable={true}
+              defaultValue={
+                queries.status && queries.status.value ? queries.status : null
+              }
+              options={statusOptions}
+              onChange={(option: SingleValue<Option>) =>
+                setValue("status", option as Option)
               }
             />
             <Button variant="outline-success" type="submit">
@@ -247,25 +222,27 @@ const Page = (props: IWithBaseProps) => {
             </Button>
           </Form>
         </Tab>
-        <Tab eventKey="feartured" title="Tính năng">
-          <Form className="d-flex">
-            <div className="d-flex w-50 ">
-              <Select
-                className="basic-single flex-fill me-2"
-                classNamePrefix="select"
-                placeholder="-- Chọn tính năng muốn áp dụng --"
-                isClearable={true}
-                isSearchable={true}
-                name="featured"
-                options={adminBlogsFeaturedOptions}
-                onChange={handleChangeOptionsFeatured}
-              />
-              <Button variant="outline-primary" onClick={handleFeatured}>
-                Áp dụng
-              </Button>
-            </div>
-          </Form>
-        </Tab>
+        {userPermissions.includes("blogs_update") && (
+          <Tab eventKey="feartured" title="Tính năng">
+            <Form className="d-flex">
+              <div className="d-flex w-50 ">
+                <Select
+                  className="basic-single flex-fill me-2"
+                  classNamePrefix="select"
+                  placeholder="-- Chọn tính năng muốn áp dụng --"
+                  isClearable={true}
+                  isSearchable={true}
+                  name="featured"
+                  options={featuredOptions}
+                  onChange={handleChangeOptionsFeatured}
+                />
+                <Button variant="outline-primary" onClick={handleFeatured}>
+                  Áp dụng
+                </Button>
+              </div>
+            </Form>
+          </Tab>
+        )}
       </Tabs>
       <Table striped bordered hover className="mt-3 caption-top">
         <caption>Danh sách bài viết</caption>
@@ -281,7 +258,8 @@ const Page = (props: IWithBaseProps) => {
               />
             </th>
             <th>STT</th>
-            <th>Tiêu đề</th>
+            <th style={{ width: "300px" }}>Tiêu đề</th>
+            <th>Chủ đề</th>
             <th>Hình ảnh</th>
             <th>Tác giả</th>
             <th>Trạng thái</th>
@@ -302,12 +280,14 @@ const Page = (props: IWithBaseProps) => {
                 </td>
                 <td>{(pagination.page - 1) * pagination.limit + index + 1}</td>
                 <td>{blog.title}</td>
+                <td>{blog.topic?.label || "Chưa có chủ đề"}</td>
                 <td>
                   <Image
                     src={blog.thumbnail + "" || "/image/no-image.png"}
                     width={80}
                     height={80}
                     alt={blog.title}
+                    style={{ objectFit: "contain" }}
                   />
                 </td>
                 <td>{blog.author}</td>
@@ -324,7 +304,7 @@ const Page = (props: IWithBaseProps) => {
                         variant="outline-warning"
                         className="center"
                         onClick={() =>
-                          router.push("/admin/blogs/create?id=" + blog._id)
+                          router.push("/admin/blogs/create?slug=" + blog.slug)
                         }>
                         <TiEdit />
                       </Button>
@@ -343,7 +323,7 @@ const Page = (props: IWithBaseProps) => {
             ))
           ) : (
             <tr className="text-center">
-              <td colSpan={8}>Chưa có bài viết nào</td>
+              <td colSpan={9}>Chưa có bài viết nào</td>
             </tr>
           )}
         </tbody>
@@ -355,6 +335,7 @@ const Page = (props: IWithBaseProps) => {
         </div>
         <Pagination
           pagination={pagination}
+          siblingCount={1}
           onHandlePagination={handlePagination}
         />
       </div>

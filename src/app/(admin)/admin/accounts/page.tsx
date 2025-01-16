@@ -1,7 +1,5 @@
 "use client";
 import withBase from "@/hocs/withBase";
-import { adminAccountsFeaturedOptions } from "@/options/featured";
-import { adminAccountsFilteredOptions } from "@/options/filter";
 import AccountsService from "@/services/accounts";
 import RolesService from "@/services/roles";
 import moment from "moment";
@@ -28,12 +26,17 @@ import {
   deletedAccount,
   handlePagination,
   handleQueries,
+  saveRole,
   selectedIdsChanged,
   seletedIdsChangedAll,
   updateFeature,
 } from "@/lib/features/account/accountSlice";
 import { fetchAccounts } from "@/lib/features/account/accountThunk";
-import Loading from "@/components/Loading/Loading";
+import Loading from "@/components/Loading";
+import { FiEye } from "react-icons/fi";
+import { featuredOptions } from "@/options/feature";
+import setOrDeleteParam from "@/helpers/setOrDeleteParam";
+import { statusOptions } from "@/options/status";
 
 const Page = (props: IWithBaseProps) => {
   const userPermissions = useAppSelector(
@@ -45,111 +48,79 @@ const Page = (props: IWithBaseProps) => {
   const [roleOptions, setRoleOptions] = useState<Option[]>([]);
   const accounts = useAppSelector((state) => state.accounts.data);
   const pagination = useAppSelector((state) => state.accounts.pagination);
-  const selectedIds = useAppSelector((state) => state.products.selectedIds);
+  const selectedIds = useAppSelector((state) => state.accounts.selectedIds);
   const queries = useAppSelector((state) => state.accounts.queries);
   const [loading, setLoading] = useState<boolean>(false);
-
-  useEffect(() => {
-    const params = new URLSearchParams(searchParams.toString());
-    const setOrDeleteParam = (
-      key: string,
-      value: string | number | boolean
-    ) => {
-      if (value) {
-        params.set(key, value.toString());
-      } else {
-        params.delete(key);
-      }
-    };
-
-    setOrDeleteParam("page", pagination.page);
-    setOrDeleteParam("fullname", queries.keywords);
-    setOrDeleteParam("role", queries.role?.label as string);
-
-    const storageParamsRoleKey = localStorage
-      .getItem("roleFilterValue")
-      ?.split(",")[0] as string;
-    if (queries.role && queries.role.value) {
-      const filterLabel = queries.role.label;
-      const filterValue = queries.role.value;
-      const [filterKey] = queries.role.value.split(",");
-      if (filterKey !== storageParamsRoleKey) {
-        params.delete("role");
-        params.set("role", filterLabel);
-        localStorage.setItem("roleFilterValue", filterValue);
-        localStorage.setItem("roleFilterLabel", filterLabel);
-      } else {
-        params.set("role", filterLabel);
-        localStorage.setItem("roleFilterValue", filterValue);
-        localStorage.setItem("roleFilterLabel", filterLabel);
-      }
-    } else {
-      params.delete("role");
-      localStorage.removeItem("roleFilterValue");
-      localStorage.removeItem("roleFilterLabel");
-    }
-
-    const storageParamsAccountKey = localStorage
-      .getItem("accountFilterValue")
-      ?.split(",")[0] as string;
-    if (queries.filter && queries.filter.value) {
-      const filterLabel = queries.filter.label;
-      const filterValue = queries.filter.value;
-      const [filterKey] = queries.filter.value.split(",");
-      if (filterKey !== storageParamsAccountKey) {
-        params.delete(storageParamsAccountKey);
-        params.set(filterKey, filterLabel);
-        localStorage.setItem("accountFilterValue", filterValue);
-        localStorage.setItem("accountFilterLabel", filterLabel);
-      } else {
-        params.set(filterKey, filterLabel);
-        localStorage.setItem("accountFilterValue", filterValue);
-        localStorage.setItem("accountFilterLabel", filterLabel);
-      }
-    } else {
-      params.delete(storageParamsAccountKey);
-      localStorage.removeItem("accountFilterValue");
-      localStorage.removeItem("accountFilterLabel");
-    }
-
-    (async () => {
-      setLoading(true);
-      await dispatch(
-        fetchAccounts({
-          page: pagination.page,
-          limit: pagination.limit,
-          ...(queries.keywords && { fullname: queries.keywords }),
-          ...(queries.filter !== null
-            ? {
-                [queries.filter?.value?.split(",")[0]]:
-                  queries.filter?.value?.split(",")[1],
-              }
-            : {}),
-          ...(queries.role !== null && queries.role.value
-            ? {
-                role: queries.role?.value,
-              }
-            : {}),
-        })
-      );
-      setLoading(false);
-    })();
-    router.push(pathname + "?" + params.toString());
-  }, [queries, pagination.page]);
 
   useEffect(() => {
     const fetchRoles = async () => {
       const response = await RolesService.index(null);
       if (response.success && response.data) {
-        const options = response.data.map((role: IRole) => ({
+        const rolesOptions = response.data.map((role: IRole) => ({
           value: role._id,
           label: role.title,
         }));
-        setRoleOptions(options);
+        setRoleOptions(rolesOptions);
+        const findRole = rolesOptions.find(
+          (option) => option.value === searchParams.get("role")
+        );
+        if (findRole?.value) {
+          setValue("role", findRole);
+          dispatch(saveRole(findRole));
+        } else {
+          setValue("role", null);
+        }
       }
     };
     fetchRoles();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const fetchAccountsData = async () => {
+    await dispatch(
+      fetchAccounts({
+        page: pagination.page,
+        limit: pagination.limit,
+        ...(queries.keywords && { fullname: queries.keywords }),
+        ...(queries.status !== null && queries.status?.value
+          ? {
+              [queries.status?.value?.split(",")[0]]:
+                queries.status?.value?.split(",")[1],
+            }
+          : {}),
+        ...(queries.role !== null && queries.role?.value
+          ? {
+              role: queries.role?.value,
+            }
+          : {}),
+      })
+    );
+  };
+
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    setOrDeleteParam(params, "page", pagination.page);
+    setOrDeleteParam(params, "name", queries.keywords);
+    setOrDeleteParam(
+      params,
+      "status",
+      queries.status?.value && queries.status?.value.split(",")[1]
+    );
+    setOrDeleteParam(
+      params,
+      "role",
+      queries.role?.value && queries.role?.value
+    );
+
+    setLoading(true);
+    const delayDebounce = setTimeout(async () => {
+      fetchAccountsData();
+      setLoading(false);
+      router.push(pathname + "?" + params.toString());
+    }, 1000);
+    return () => clearTimeout(delayDebounce);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queries, pagination.page]);
 
   const handleChangeOptionsFeatured = (option: Option | null) => {
     setSelectedFeatured(option);
@@ -203,48 +174,26 @@ const Page = (props: IWithBaseProps) => {
     }
   };
 
-  const { register, handleSubmit, setValue } = useForm<IAccountsQueries>({
-    defaultValues: {
-      keywords: queries.keywords,
-    },
-  });
+  const { register, handleSubmit, setValue, watch } = useForm<IAccountsQueries>(
+    {
+      defaultValues: {
+        keywords: queries.keywords,
+        role: queries.role,
+      },
+    }
+  );
   const onSubmit: SubmitHandler<IAccountsQueries> = async (
     data: IAccountsQueries
   ) => {
     dispatch(handlePagination({ ...pagination, page: 1 }));
-    const filterKey = localStorage
-      .getItem("accountFilterValue")
-      ?.split(",")[0] as string;
-    if (!data.filter || !data.filter.value) {
-      if (filterKey) {
-        dispatch(
-          handleQueries({
-            ...queries,
-            filter: {
-              value: "",
-              label: "",
-            },
-          })
-        );
-      } else {
-        dispatch(
-          handleQueries({
-            ...queries,
-            keywords: data.keywords,
-            role: data.role,
-          })
-        );
-      }
-    } else {
-      dispatch(
-        handleQueries({
-          ...queries,
-          keywords: data.keywords,
-          filter: data.filter,
-          role: data.role,
-        })
-      );
-    }
+    dispatch(
+      handleQueries({
+        ...queries,
+        keywords: data.keywords,
+        status: data.status,
+        role: data.role,
+      })
+    );
   };
 
   return (
@@ -275,34 +224,30 @@ const Page = (props: IWithBaseProps) => {
                 {...register("keywords")}
               />
             </Form.Group>
-            <Form.Group className="me-2">
-              <Select
-                className="basic-single me-2"
-                classNamePrefix="select"
-                placeholder="-- Chọn vai trò --"
-                name="roles"
-                isClearable={true}
-                defaultValue={
-                  queries.role && queries.role.value ? queries.role : null
-                }
-                options={roleOptions}
-                onChange={(option: SingleValue<Option>) =>
-                  setValue("role", option as Option)
-                }
-              />
-            </Form.Group>
+            <Select
+              className="basic-single me-2"
+              classNamePrefix="select"
+              placeholder="-- Chọn vai trò --"
+              name="role"
+              isClearable={true}
+              value={watch("role") ? watch("role") : null}
+              options={roleOptions}
+              onChange={(option: SingleValue<Option>) =>
+                setValue("role", option as Option)
+              }
+            />
             <Select
               className="basic-single me-2"
               classNamePrefix="select"
               placeholder="-- Chọn trạng thái --"
-              name="filter"
+              name="status"
               isClearable={true}
               defaultValue={
-                queries.filter && queries.filter.value ? queries.filter : null
+                queries.status && queries.status.value ? queries.status : null
               }
-              options={adminAccountsFilteredOptions}
+              options={statusOptions}
               onChange={(option: SingleValue<Option>) =>
-                setValue("filter", option as Option)
+                setValue("status", option as Option)
               }
             />
             <Button variant="outline-success" type="submit">
@@ -310,25 +255,27 @@ const Page = (props: IWithBaseProps) => {
             </Button>
           </Form>
         </Tab>
-        <Tab eventKey="feartured" title="Tính năng">
-          <Form className="d-flex">
-            <div className="d-flex w-50 ">
-              <Select
-                className="basic-single flex-fill me-2"
-                classNamePrefix="select"
-                placeholder="-- Chọn tính năng muốn áp dụng --"
-                isClearable={true}
-                isSearchable={true}
-                name="featured"
-                options={adminAccountsFeaturedOptions}
-                onChange={handleChangeOptionsFeatured}
-              />
-              <Button variant="outline-primary" onClick={handleFeatured}>
-                Áp dụng
-              </Button>
-            </div>
-          </Form>
-        </Tab>
+        {userPermissions.includes("accounts_update") && (
+          <Tab eventKey="feartured" title="Tính năng">
+            <Form className="d-flex">
+              <div className="d-flex w-50">
+                <Select
+                  className="basic-single flex-fill me-2"
+                  classNamePrefix="select"
+                  placeholder="-- Chọn tính năng muốn áp dụng --"
+                  isClearable={true}
+                  isSearchable={true}
+                  name="featured"
+                  options={featuredOptions}
+                  onChange={handleChangeOptionsFeatured}
+                />
+                <Button variant="outline-primary" onClick={handleFeatured}>
+                  Áp dụng
+                </Button>
+              </div>
+            </Form>
+          </Tab>
+        )}
       </Tabs>
       <Table striped bordered hover className="mt-3 caption-top">
         <caption>Danh sách tài khoản</caption>
@@ -375,40 +322,71 @@ const Page = (props: IWithBaseProps) => {
                 </td>
                 <td>{moment(account.updatedAt).format("DD-MM-YYYY")}</td>
                 <td>
-                  <div className="d-flex gap-2">
-                    {(userPermissions.includes("accounts_update") ||
-                      account._id === userId) && (
-                      <Button
-                        variant="outline-warning"
-                        className="center"
-                        onClick={() =>
-                          router.push(
-                            "/admin/accounts/create?id=" + account._id
-                          )
-                        }>
-                        <TiEdit />
-                      </Button>
-                    )}
-                    {userPermissions.includes("accounts_delete") && (
-                      <Button
-                        variant="outline-danger"
-                        className="center"
-                        onClick={() => deleteAccount(account._id)}>
-                        <TfiTrash />
-                      </Button>
-                    )}
-                    {(userPermissions.includes("accounts_update") ||
-                      account._id === userId) && (
-                      <Button
-                        variant="outline-secondary"
-                        className="center"
-                        onClick={() =>
-                          router.push(`/admin/accounts/password/${account._id}`)
-                        }>
-                        <MdPassword />
-                      </Button>
-                    )}
-                  </div>
+                  {account.email !== "admin@gmail.com" ? (
+                    <div className="d-grid grid-2 gap-2">
+                      {userPermissions.includes("accounts_view") && (
+                        <Button
+                          variant="outline-success"
+                          className="center"
+                          onClick={() =>
+                            router.push(
+                              "/admin/accounts/view?id=" + account._id
+                            )
+                          }>
+                          <FiEye />
+                        </Button>
+                      )}
+                      {(userPermissions.includes("accounts_update") ||
+                        account._id === userId) && (
+                        <Button
+                          variant="outline-warning"
+                          className="center"
+                          onClick={() =>
+                            router.push(
+                              "/admin/accounts/create?id=" + account._id
+                            )
+                          }>
+                          <TiEdit />
+                        </Button>
+                      )}
+                      {userPermissions.includes("accounts_delete") && (
+                        <Button
+                          variant="outline-danger"
+                          className="center"
+                          onClick={() => deleteAccount(account._id)}>
+                          <TfiTrash />
+                        </Button>
+                      )}
+                      {(userPermissions.includes("accounts_update") ||
+                        account._id === userId) && (
+                        <Button
+                          variant="outline-secondary"
+                          className="center"
+                          onClick={() =>
+                            router.push(
+                              `/admin/accounts/password/${account._id}`
+                            )
+                          }>
+                          <MdPassword />
+                        </Button>
+                      )}
+                    </div>
+                  ) : (
+                    <div>
+                      {userPermissions.includes("accounts_view") && (
+                        <Button
+                          variant="outline-success"
+                          className="center"
+                          onClick={() =>
+                            router.push(
+                              "/admin/accounts/view?id=" + account._id
+                            )
+                          }>
+                          <FiEye />
+                        </Button>
+                      )}
+                    </div>
+                  )}
                 </td>
               </tr>
             ))
@@ -421,11 +399,12 @@ const Page = (props: IWithBaseProps) => {
       </Table>
       <div className="d-flex justify-content-between align-items-center mb-5">
         <div>
-          Hiển thị {rangeCount(accounts, pagination)}
+          Hiển thị {rangeCount<IUser>(accounts, pagination)}
           trên {pagination.totalItems} kết quả.
         </div>
         <Pagination
           pagination={pagination}
+          siblingCount={1}
           onHandlePagination={handlePagination}
         />
       </div>

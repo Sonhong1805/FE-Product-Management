@@ -11,32 +11,32 @@ const RowNested = ({
   parentPath,
   onUpdateCategory,
   onDeleteCategory,
-  selectedIds,
-  setSelectedIds,
+  selectedSlugs,
+  setSelectedSlugs,
 }: {
   categories: ICategory[];
   parentPath: string;
   onUpdateCategory: (id: string) => void;
   onDeleteCategory: (id: string) => void;
-  selectedIds: (string | number)[];
-  setSelectedIds: React.Dispatch<React.SetStateAction<(string | number)[]>>;
+  selectedSlugs: string[];
+  setSelectedSlugs: React.Dispatch<React.SetStateAction<string[]>>;
 }) => {
   const userPermissions = useAppSelector(
     (state) => state.user.userInfo.role.permissions
   );
-  const handleSelectedIds = (id: string) => {
-    setSelectedIds((prev) => {
-      if (prev.includes(id)) {
-        return prev.filter((item) => item !== id);
+  const handleSelectedIds = (slug: string) => {
+    setSelectedSlugs((prev) => {
+      if (prev.includes(slug)) {
+        return prev.filter((item) => item !== slug);
       }
-      return [...prev, id];
+      return [...prev, slug];
     });
   };
 
   return (
     <>
       {categories.length > 0 ? (
-        categories.map((category: ICategory, index: number) => {
+        categories.map((category: ICategory) => {
           const newParentPath = parentPath
             ? `${parentPath} / ${category.title}`
             : category.title;
@@ -48,8 +48,8 @@ const RowNested = ({
                   <Form.Check
                     type="checkbox"
                     id={category._id}
-                    checked={selectedIds.includes(category._id)}
-                    onChange={() => handleSelectedIds(category._id)}
+                    checked={selectedSlugs.includes(category.slug)}
+                    onChange={() => handleSelectedIds(category.slug)}
                   />
                 </td>
                 <td>{category.title}</td>
@@ -73,7 +73,7 @@ const RowNested = ({
                     <Button
                       variant="outline-danger"
                       className="center"
-                      onClick={() => onDeleteCategory(category._id)}>
+                      onClick={() => onDeleteCategory(category.slug)}>
                       <TfiTrash />
                     </Button>
                   )}
@@ -85,8 +85,8 @@ const RowNested = ({
                   parentPath={newParentPath}
                   onUpdateCategory={onUpdateCategory}
                   onDeleteCategory={onDeleteCategory}
-                  selectedIds={selectedIds}
-                  setSelectedIds={setSelectedIds}
+                  selectedSlugs={selectedSlugs}
+                  setSelectedSlugs={setSelectedSlugs}
                 />
               )}
             </Fragment>

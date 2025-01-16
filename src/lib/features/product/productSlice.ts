@@ -1,5 +1,9 @@
 import { createSlice } from "@reduxjs/toolkit";
 import { fetchProducts } from "./productThunk";
+import {
+  adminProductsFilteredOptions,
+  clientProductsFilteredOptions,
+} from "@/options/filter";
 
 const getPage =
   typeof window !== "undefined"
@@ -29,6 +33,24 @@ const getCategories =
   typeof window !== "undefined"
     ? new URLSearchParams(window.location.search).get("categories")
     : "";
+const getFilter =
+  typeof window !== "undefined"
+    ? new URLSearchParams(window.location.search).get("filter")
+    : "";
+const getSort =
+  typeof window !== "undefined"
+    ? new URLSearchParams(window.location.search).get("sort")
+    : "";
+
+const findFilter = adminProductsFilteredOptions.find((option) => {
+  const optionValue = option.value.split(",")[1];
+  return optionValue === getFilter + "";
+});
+
+const findSort = clientProductsFilteredOptions.find((option) => {
+  const optionValue = option.value.split(",")[1];
+  return optionValue === getSort + "";
+});
 
 interface IInitialState {
   isLoading: boolean;
@@ -46,7 +68,7 @@ const initialState: IInitialState = {
   selectedIds: [],
   view: "GRID",
   pagination: {
-    limit: 12,
+    limit: 6,
     page: getPage ? +getPage : 1,
     totalItems: 0,
     totalPages: 0,
@@ -57,12 +79,15 @@ const initialState: IInitialState = {
     priceTo: getPriceTo ? +getPriceTo : 0,
     categorySlug: getCategories ? getCategories.split(",") : [],
     filter: {
-      label: "",
-      value: "",
+      label: getFilter && findFilter ? findFilter.label : "",
+      value: getFilter && findFilter ? findFilter?.value : "",
     },
     colors: getColors ? getColors.split(",") : [],
     tags: getTags ? getTags.split(",") : [],
-    label: "",
+    sort: {
+      label: getSort && findSort ? findSort.label : "",
+      value: getSort && findSort ? findSort?.value : "",
+    },
   },
 };
 
@@ -126,9 +151,12 @@ export const productSlice = createSlice({
           label: "",
           value: "",
         },
+        sort: {
+          label: "",
+          value: "",
+        },
         colors: [],
         tags: [],
-        label: "",
       };
     },
     saveSelectedIds: (state, action) => {

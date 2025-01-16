@@ -22,7 +22,7 @@ const NavbarNested = ({
           <ul
             className="bg-light text-dark border m-0 p-0"
             style={{ listStyle: "none" }}>
-            {item.children.map((child: any) => (
+            {item.children.map((child: Omit<ICategory, "children">) => (
               <NavbarNested
                 item={child}
                 key={child._id}

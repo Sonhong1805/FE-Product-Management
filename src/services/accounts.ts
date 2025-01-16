@@ -1,7 +1,9 @@
 import axios from "../customs/axios-customize";
 
 const AccountsService = {
-  index: (params: Record<string, any>): Promise<IResponse<IUser[]>> => {
+  index: (
+    params: Record<string, string | number | boolean>
+  ): Promise<IResponse<IUser[]>> => {
     return axios.get("/accounts", { params });
   },
 

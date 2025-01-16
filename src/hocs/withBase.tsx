@@ -4,13 +4,13 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 const withBase = <P extends object>(
   Component: React.ComponentType<P & IWithBaseProps>
 ) => {
-  return (props: Omit<P, keyof IWithBaseProps>) => {
+  const WithBaseComponent = (props: Omit<P, keyof IWithBaseProps>) => {
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
     const dispatch = useAppDispatch();
 
-    const rangeCount = (items: any, pagination: IPagination) => {
+    const rangeCount = <T,>(items: T[], pagination: IPagination) => {
       const currentPage = Number(searchParams?.get("page")) || 1;
       const pageSize = pagination.limit;
       const start = items.length ? (currentPage - 1) * pageSize + 1 : 0;
@@ -29,6 +29,12 @@ const withBase = <P extends object>(
       />
     );
   };
+
+  WithBaseComponent.displayName = `WithBase(${
+    Component.displayName || Component.name || "Component"
+  })`;
+
+  return WithBaseComponent;
 };
 
 export default withBase;

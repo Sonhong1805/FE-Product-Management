@@ -1,14 +1,15 @@
 "use client";
-import withBase from "@/hocs/withBase";
-import { useAppSelector } from "@/lib/hooks";
 import AccountsService from "@/services/accounts";
+import { useRouter } from "next/navigation";
 import React, { useState } from "react";
-import { Button, Col, Container, Form } from "react-bootstrap";
+import { Button, Container, Form } from "react-bootstrap";
 import { SubmitHandler, useForm } from "react-hook-form";
+import { BiExit } from "react-icons/bi";
 import { BsEye, BsEyeSlash } from "react-icons/bs";
 import Swal from "sweetalert2";
 
 const Page = ({ params: { userId } }: { params: { userId: string } }) => {
+  const router = useRouter();
   const [isShowNewPassword, setIsShowNewPassword] = useState(false);
   const [isShowConfirmPassword, setIsShowConfirmPassword] = useState(false);
   const {
@@ -51,9 +52,16 @@ const Page = ({ params: { userId } }: { params: { userId: string } }) => {
     <Container>
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2 className="">Thay đổi mật khẩu cho tài khoản</h2>
+        <Button
+          variant="warning"
+          className="center gap-2"
+          aria-hidden="false"
+          onClick={() => router.push("/admin/accounts")}>
+          <BiExit size={20} /> <span>Trở về</span>
+        </Button>
       </div>
       <Form onSubmit={handleSubmit(onSubmit)} className="mb-5">
-        <div className="w-50">
+        <div className="w-25">
           <Form.Group className="mb-3" controlId="new-password">
             <Form.Label>Mật khẩu mới</Form.Label>
             <div className="position-relative">
@@ -116,7 +124,7 @@ const Page = ({ params: { userId } }: { params: { userId: string } }) => {
           <Form.Group className="mb-3" controlId="exampleForm.ControlInput1">
             <Button
               variant="outline-primary"
-              className="w-25 m-auto"
+              className="w-100 m-auto"
               type="submit">
               Thay đổi
             </Button>

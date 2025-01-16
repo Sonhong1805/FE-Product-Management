@@ -5,42 +5,39 @@ const CategoriesService = {
     return axios.get("/categories");
   },
 
-  detail: (id: string): Promise<IResponse<ICategory>> => {
-    return axios.get("/categories/" + id);
+  detail: (slug: string): Promise<IResponse<ICategory>> => {
+    return axios.get("/categories/" + slug);
   },
 
   create: ({
     title,
     parent_slug,
-  }: {
-    title: string;
-    parent_slug: string;
-  }): Promise<IResponse<ICategory>> => {
+  }: ICategoryInputs): Promise<IResponse<ICategory[]>> => {
     return axios.post("/categories", { title, parent_slug });
   },
 
   update: ({
-    id,
+    slug,
     title,
-    parent_id,
+    parent_slug,
   }: {
-    id: string;
+    slug: string;
     title: string;
-    parent_id: string;
-  }): Promise<IResponse<ICategory>> => {
-    return axios.patch(`/categories/${id}`, { title, parent_id });
+    parent_slug: string;
+  }): Promise<IResponse<ICategory[]>> => {
+    return axios.patch(`/categories/${slug}`, { title, parent_slug });
   },
-  delete: (id: string): Promise<IResponse<ICategory>> => {
-    return axios.delete("/categories/" + id);
+  delete: (slug: string): Promise<IResponse<ICategory[]>> => {
+    return axios.delete("/categories/" + slug);
   },
   changeFeature: ({
-    ids,
+    slugs,
     feature,
   }: {
-    ids: (string | number)[];
+    slugs: string[];
     feature: string;
-  }): Promise<IResponse<ICategory>> => {
-    return axios.post("/categories/feature", { ids, feature });
+  }): Promise<IResponse<ICategory[]>> => {
+    return axios.post("/categories/feature", { slugs, feature });
   },
 
   getSubCategories: (

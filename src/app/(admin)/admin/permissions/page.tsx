@@ -1,8 +1,9 @@
 "use client";
+import Loading from "@/components/Loading";
 import RowPermissionAll from "@/components/Row/RowPermissionAll";
 import RowPermissionChild from "@/components/Row/RowPermissionChild";
 import RowPermissionParent from "@/components/Row/RowPermissionParent";
-import { permissionAll, permissionModule } from "@/constants/permission";
+import { permissionAll } from "@/constants/permission";
 import { permissions } from "@/constants/permissions";
 import { useAppSelector } from "@/lib/hooks";
 import RolesService from "@/services/roles";
@@ -15,21 +16,27 @@ const Page = () => {
   );
   const [roles, setRoles] = useState<IRole[]>([]);
   const isFirstRender = useRef(true);
+  const [loading, setLoading] = useState<boolean>(false);
 
+  const fetchRolesData = async () => {
+    const response = await RolesService.index(null);
+    if (response?.success && response.data) {
+      const roles = response.data as IRole[];
+      const sortedRoles = roles.sort((a: IRole, b: IRole) => {
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return dateA - dateB;
+      });
+      setRoles(sortedRoles || []);
+    }
+  };
   useEffect(() => {
-    const fetchRoles = async () => {
-      const response = await RolesService.index(null);
-      if (response?.success && response.data) {
-        const roles = response.data as IRole[];
-        const sortedRoles = roles.sort((a: IRole, b: IRole) => {
-          const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
-          const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
-          return dateA - dateB;
-        });
-        setRoles(sortedRoles || []);
-      }
-    };
-    fetchRoles();
+    setLoading(true);
+    const delayDebounce = setTimeout(async () => {
+      fetchRolesData();
+      setLoading(false);
+    }, 1000);
+    return () => clearTimeout(delayDebounce);
   }, []);
 
   useEffect(() => {
@@ -118,6 +125,7 @@ const Page = () => {
 
   return (
     <Container>
+      {loading && <Loading />}
       <div className="mb-4">
         <h2>Phân quyền tài khoản</h2>
       </div>

@@ -5,7 +5,7 @@ const WishlistService = {
     return axios.post("/wishlist", data);
   },
 
-  delete: (id: string): Promise<IResponse<any>> => {
+  delete: (id: string): Promise<IResponse<string>> => {
     return axios.delete(`/wishlist/${id}`);
   },
 };

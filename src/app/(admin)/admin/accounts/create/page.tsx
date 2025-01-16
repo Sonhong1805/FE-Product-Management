@@ -7,12 +7,12 @@ import React, { useEffect, useState } from "react";
 import { Button, Container, Form } from "react-bootstrap";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { BiExit } from "react-icons/bi";
-import Select, { ActionMeta, MultiValue, SingleValue } from "react-select";
+import Select, { MultiValue, SingleValue } from "react-select";
 import makeAnimated from "react-select/animated";
 import Swal from "sweetalert2";
 const animatedComponents = makeAnimated();
 
-const Page = (props: any) => {
+const Page = (props: IWithBaseProps) => {
   const { router, searchParams } = props;
   const [roleOptions, setRoleOptions] = useState<Option[]>([]);
   const [avatarPreview, setAvatarPreview] = useState("");
@@ -33,6 +33,7 @@ const Page = (props: any) => {
         setValue("email", email);
         setValue("gender", gender);
         setValue("phone", phone);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         setValue("role", (role?._id as any) || "");
         const roleOption: Option = {
           value: role?._id || "",
@@ -43,6 +44,7 @@ const Page = (props: any) => {
       }
     };
     fetchProductDetail();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
   useEffect(() => {
@@ -122,13 +124,14 @@ const Page = (props: any) => {
   };
 
   const getRoleOptions = (
-    newValue: SingleValue<Option> | MultiValue<Option> | null,
-    actionMeta: ActionMeta<Option>
+    newValue: SingleValue<Option> | MultiValue<Option> | null
   ) => {
     if (newValue) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       setValue("role", (newValue as Option).value as any);
       setDefaultRole(newValue as Option);
     } else {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       setValue("role", "" as any);
       setDefaultRole({ value: "", label: "" });
     }
@@ -162,7 +165,7 @@ const Page = (props: any) => {
             <Form.Group className="mb-3" controlId="email">
               <Form.Label>Email</Form.Label>
               <Form.Control
-                placeholder="Nhập họ tên"
+                placeholder="Nhập email"
                 {...register("email", { required: true })}
               />
               {errors.email && (

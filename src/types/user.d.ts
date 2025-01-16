@@ -3,10 +3,10 @@ interface IUser {
   fullname: string;
   email: string;
   password: string;
-  avatar: String;
-  phone: String;
-  gender: String;
-  address: String;
+  avatar: string | FileList;
+  phone: string;
+  gender: string;
+  address: string;
   role: IRole;
   cart: ICart;
   wishlist: TWishlist[];
@@ -25,7 +25,7 @@ type IAccountInputs = Pick<
 interface IAccountsQueries {
   keywords: string;
   role: Option | null;
-  filter: Option | null;
+  status: Option | null;
 }
 
 interface IPasswordInputs {

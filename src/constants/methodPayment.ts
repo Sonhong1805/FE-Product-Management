@@ -1,4 +1,4 @@
 export const methodPayment = {
-  CASH: "Tiền mặt",
+  CASH: "Thanh toán khi nhận hàng",
   PAYPAL: "Paypal",
 };

@@ -1,5 +1,4 @@
 "use client";
-
 import { convertFileList } from "@/helpers/convertFileList";
 import { convertSlug } from "@/helpers/convertSlug";
 import withBase from "@/hocs/withBase";
@@ -10,7 +9,6 @@ import CategoriesService from "@/services/categories";
 import ProductsService from "@/services/products";
 import dynamic from "next/dynamic";
 import Image from "next/image";
-import { useRouter, useSearchParams } from "next/navigation";
 import React, {
   ChangeEvent,
   Dispatch,
@@ -19,22 +17,24 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { Button, Container, Form } from "react-bootstrap";
+import { Button, Container, Form, InputGroup } from "react-bootstrap";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { BiExit } from "react-icons/bi";
 import { IoIosCloseCircleOutline } from "react-icons/io";
-import Select, { ActionMeta, MultiValue, SingleValue } from "react-select";
+import Select, { MultiValue, SingleValue } from "react-select";
 import makeAnimated from "react-select/animated";
 import Swal from "sweetalert2";
 import { colourStyles } from "@/constants/colourStyles";
-const animatedComponents = makeAnimated();
-const Editor = dynamic(() => import("@/components/Editor/Editor"), {
-  ssr: false,
-  loading: () => <p>Loading...</p>,
-});
 import "../style.scss";
 import { FiEye } from "react-icons/fi";
 import Viewer from "viewerjs";
+import debounce from "@/helpers/debounce";
+import { nonAccentVietnamese } from "@/helpers/nonAccentVietnamese";
+const Editor = dynamic(() => import("@/components/Editor"), {
+  ssr: false,
+  loading: () => <p>Loading...</p>,
+});
+const animatedComponents = makeAnimated();
 
 const Page = (props: IWithBaseProps) => {
   const { router, searchParams } = props;
@@ -52,10 +52,10 @@ const Page = (props: IWithBaseProps) => {
   const [defaultCategory, setDefaultCategory] = useState<Option>();
   const [defaultLabel, setDefaultLabel] = useState<Option>();
   const [previewSlug, setPreviewSlug] = useState("");
+  const [priceFormat, setPriceFormat] = useState<string>("");
 
   const thumbnailRef = useRef<HTMLDivElement | null>(null);
   const galleryRef = useRef<HTMLDivElement | null>(null);
-
   const viewerInstanceRef = useRef<Viewer | null>(null);
 
   useEffect(() => {
@@ -118,6 +118,7 @@ const Page = (props: IWithBaseProps) => {
         const {
           _id,
           title,
+          slug,
           thumbnail,
           images,
           category,
@@ -140,15 +141,18 @@ const Page = (props: IWithBaseProps) => {
           label: label?.label || "",
           value: label?.value || "",
         };
-
+        setPreviewSlug(slug);
         setDefaultCategory(categoryOption || { value: "", label: "" });
         setDefaultLabel(labelOption || { value: "", label: "" });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         setValue("category", (category?._id as any) || "");
         setValue("label", label);
         setValue("thumbnail", thumbnail);
         setValue("description", description);
         setValue("images", images);
         setValue("price", price);
+        const formattedValue = new Intl.NumberFormat("en-DE").format(price);
+        setPriceFormat(formattedValue);
         setValue("discount", discount);
         setValue("quantity", quantity);
         setValue("descriptions", descriptions);
@@ -167,6 +171,7 @@ const Page = (props: IWithBaseProps) => {
       }
     };
     fetchProductDetail();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
   const {
@@ -225,18 +230,12 @@ const Page = (props: IWithBaseProps) => {
           showConfirmButton: false,
           timer: 2000,
         });
-        router.push("/admin/products");
+        setTimeout(() => {
+          router.push("/admin/products");
+        }, 2000);
       }
     }
   };
-
-  useEffect(() => {
-    if (watch("title")) {
-      setPreviewSlug(convertSlug(convertSlug(watch("title"))));
-    } else {
-      setPreviewSlug("");
-    }
-  }, [watch("title")]);
 
   const handleThumbnailChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -304,31 +303,35 @@ const Page = (props: IWithBaseProps) => {
   };
 
   const getCategoryOptions = (
-    newValue: SingleValue<Option> | MultiValue<Option> | null,
-    actionMeta: ActionMeta<Option>
+    newValue: SingleValue<Option> | MultiValue<Option> | null
   ) => {
     if (newValue && !Array.isArray(newValue)) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       setValue("category", (newValue as Option).value as any);
       setDefaultCategory(newValue as Option);
     } else {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       setValue("category", "" as any);
       setDefaultCategory({ value: "", label: "" });
     }
   };
   const getLabelOptions = (
-    newValue: SingleValue<Option> | MultiValue<Option> | null,
-    actionMeta: ActionMeta<Option>
+    newValue: SingleValue<Option> | MultiValue<Option> | null
   ) => {
     if (newValue && !Array.isArray(newValue)) {
-      setValue("label", newValue as Option as any);
+      setValue("label", newValue as Option);
       setDefaultLabel(newValue as Option);
     } else {
-      setValue("label", { value: "", label: "" } as any);
+      setValue("label", { value: "", label: "" });
       setDefaultLabel({ value: "", label: "" });
     }
   };
 
   const getValueDescription = (html: string) => setValue("descriptions", html);
+
+  const handleTitleChange = debounce((value: string) => {
+    setPreviewSlug(convertSlug(nonAccentVietnamese(value)));
+  }, 500);
 
   return (
     <Container>
@@ -349,7 +352,13 @@ const Page = (props: IWithBaseProps) => {
               <Form.Label>Tên sản phẩm</Form.Label>
               <Form.Control
                 placeholder="Nhập tên sản phẩm"
-                {...register("title", { required: true })}
+                {...register("title", {
+                  required: true,
+                  onChange: (e) => {
+                    const value = e.target.value;
+                    handleTitleChange(value);
+                  },
+                })}
               />
               {errors.title && (
                 <span className="text-danger">Vui lòng nhập tên sản phẩm</span>
@@ -358,6 +367,7 @@ const Page = (props: IWithBaseProps) => {
             <Form.Group className="mb-3" controlId="exampleForm.ControlInput1">
               <Form.Label>Mô tả ngắn sản phẩm (for SEO)</Form.Label>
               <Form.Control
+                as="textarea"
                 placeholder="Nhập mô tả ngắn cho sản phẩm"
                 {...register("description", { required: true })}
               />
@@ -402,31 +412,53 @@ const Page = (props: IWithBaseProps) => {
             <Form.Group
               className="flex-fill mb-3"
               controlId="exampleForm.ControlInput1">
-              <Form.Label>Giá (VNĐ)</Form.Label>
-              <Form.Control
-                type="number"
-                defaultValue={0}
-                min={0}
-                placeholder="Nhập giá sản phẩm"
-                {...register("price", {
-                  valueAsNumber: true,
-                })}
-              />
+              <Form.Label>Giá gốc</Form.Label>
+              <InputGroup>
+                <Form.Control
+                  value={priceFormat}
+                  placeholder="Nhập giá sản phẩm"
+                  {...register("price", {
+                    setValueAs: (value) => {
+                      const stringValue = String(value || "");
+                      return Number(stringValue.replace(/\D/g, ""));
+                    },
+                    onChange: (e) => {
+                      const rawValue = e.target.value.replace(/\D/g, "");
+                      const formattedValue = new Intl.NumberFormat(
+                        "en-DE"
+                      ).format(Number(rawValue));
+                      setPriceFormat(formattedValue);
+                    },
+                  })}
+                />
+                <InputGroup.Text id="basic-addon2">VND</InputGroup.Text>
+              </InputGroup>
             </Form.Group>
             <div className="d-flex mb-3 gap-3 flex-wrap">
               <Form.Group
                 className="flex-fill"
                 controlId="exampleForm.ControlInput1">
-                <Form.Label>Phần trăm giảm giá (??%)</Form.Label>
-                <Form.Control
-                  type="number"
-                  defaultValue={0}
-                  min={0}
-                  placeholder="Nhập phần trăm giảm giá"
-                  {...register("discount", {
-                    valueAsNumber: true,
-                  })}
-                />
+                <Form.Label>Phần trăm giảm giá</Form.Label>
+                <InputGroup>
+                  <Form.Control
+                    type="number"
+                    min={0}
+                    max={100}
+                    placeholder="Nhập phần trăm giảm giá"
+                    {...register("discount", {
+                      setValueAs: (value) => +value || 0,
+                      onChange: (e) => {
+                        const inputValue = e.target.value;
+                        const value =
+                          inputValue === ""
+                            ? 0
+                            : Math.min(Math.max(+inputValue, 0), 100);
+                        setValue("discount", value);
+                      },
+                    })}
+                  />
+                  <InputGroup.Text id="basic-addon2">%</InputGroup.Text>
+                </InputGroup>
               </Form.Group>
               <Form.Group
                 className="flex-fill"
@@ -434,11 +466,15 @@ const Page = (props: IWithBaseProps) => {
                 <Form.Label>Số lượng</Form.Label>
                 <Form.Control
                   type="number"
-                  defaultValue={0}
                   min={0}
                   placeholder="Nhập số lượng"
                   {...register("quantity", {
-                    valueAsNumber: true,
+                    setValueAs: (value) => +value || 0,
+                    onChange: (e) => {
+                      const inputValue = e.target.value;
+                      const value = inputValue === "" ? 0 : +inputValue;
+                      setValue("quantity", value);
+                    },
                   })}
                 />
               </Form.Group>
@@ -480,7 +516,7 @@ const Page = (props: IWithBaseProps) => {
             </Form.Group>
           </div>
           <div className="w-50">
-            <Form.Group className="mb-3" controlId="exampleForm.ControlInput1">
+            <Form.Group className="mb-4" controlId="exampleForm.ControlInput1">
               <Form.Label>Slug sản phẩm</Form.Label>
               <Form.Control
                 placeholder={
@@ -490,15 +526,15 @@ const Page = (props: IWithBaseProps) => {
                 {...register("slug")}
               />
             </Form.Group>
-            <div ref={thumbnailRef}>
+            <div ref={thumbnailRef} className="mb-4">
               <Image
                 src={
                   watch("_id") && watch("thumbnail")
                     ? thumbnailPreview || getValues("thumbnail") + ""
                     : thumbnailPreview || "/image/no-image.png"
                 }
-                width={257}
-                height={257}
+                width={335}
+                height={335}
                 alt="thumbnail"
                 priority={true}
                 style={{ objectFit: "contain" }}
@@ -506,7 +542,7 @@ const Page = (props: IWithBaseProps) => {
             </div>
 
             <Form.Group controlId="formFile" className="mb-3">
-              <Form.Label>Thêm ảnh</Form.Label>
+              <Form.Label>Thêm ảnh đại diện cho sản phẩm</Form.Label>
               <Form.Control
                 type="file"
                 {...register("thumbnail")}

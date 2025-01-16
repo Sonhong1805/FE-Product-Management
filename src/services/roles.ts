@@ -1,7 +1,9 @@
 import axios from "../customs/axios-customize";
 
 const RolesService = {
-  index: (params: Record<string, any> | null): Promise<IResponse<IRole[]>> => {
+  index: (
+    params: Record<string, string | number | boolean> | null
+  ): Promise<IResponse<IRole[]>> => {
     return axios.get("/roles", { params });
   },
 

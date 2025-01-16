@@ -1,29 +1,45 @@
 "use client";
+import withBase from "@/hocs/withBase";
 import AuthService from "@/services/auth";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import React from "react";
+import React, { useState } from "react";
 import { Button, Container, FloatingLabel, Form } from "react-bootstrap";
 import { SubmitHandler, useForm } from "react-hook-form";
+import { BsEye, BsEyeSlash } from "react-icons/bs";
+import Swal from "sweetalert2";
 
-const Page = () => {
-  const router = useRouter();
+const Page = (props: IWithBaseProps) => {
+  const { router } = props;
+  const [isShowPassword, setIsShowPassword] = useState(false);
+  const [isShowConfirmPassword, setIsShowConfirmPassword] = useState(false);
   const {
     register,
     handleSubmit,
+    setError,
     formState: { errors },
   } = useForm<IRegister>();
   const onSubmit: SubmitHandler<IRegister> = async (data) => {
+    if (data.confirmPassword !== data.password) {
+      setError("confirmPassword", {
+        message: "Mật khẩu không khớp!! Vui lòng xác nhận lại mật khẩu",
+      });
+      return;
+    }
     const response = await AuthService.register(data);
     if (response?.success) {
       router.push("/login");
     } else {
-      alert("Error");
+      Swal.fire({
+        icon: "error",
+        title: response?.message,
+        showConfirmButton: false,
+        timer: 2000,
+      });
     }
   };
 
   return (
-    <Container className="mt-5">
+    <Container className="py-5">
       <h1 className="text-center mb-3">Đăng ký tài khoản</h1>
       <Form
         style={{ width: "30rem" }}
@@ -54,27 +70,64 @@ const Page = () => {
           )}
         </Form.Group>
         <Form.Group className="mb-3">
-          <FloatingLabel label="Nhập mật khẩu" className="mb-3">
-            <Form.Control
-              type="password"
-              placeholder="Nhập mật khẩu"
-              {...register("password", { required: true })}
-            />
-          </FloatingLabel>
+          <div className="position-relative">
+            <FloatingLabel label="Nhập mật khẩu" className="mb-3">
+              <Form.Control
+                type={isShowPassword ? "text" : "password"}
+                placeholder="Nhập mật khẩu"
+                {...register("password", { required: true })}
+              />
+              {isShowPassword ? (
+                <BsEye
+                  className="position-absolute"
+                  cursor={"pointer"}
+                  onClick={() => setIsShowPassword(false)}
+                  style={{ top: "19px", right: "10px", fontSize: "25px" }}
+                />
+              ) : (
+                <BsEyeSlash
+                  className="position-absolute"
+                  cursor={"pointer"}
+                  onClick={() => setIsShowPassword(true)}
+                  style={{ top: "19px", right: "10px", fontSize: "25px" }}
+                />
+              )}
+            </FloatingLabel>
+          </div>
           {errors.password && (
             <span className="text-danger">Vui lòng nhập mật khẩu</span>
           )}
         </Form.Group>
         <Form.Group className="mb-3">
-          <FloatingLabel label="Xác nhận lại mật khẩu" className="mb-3">
-            <Form.Control
-              type="password"
-              placeholder="Xác nhận lại mật khẩu"
-              {...register("confirmPassword", { required: true })}
-            />
-          </FloatingLabel>
+          <div className="position-relative">
+            <FloatingLabel label="Xác nhận lại mật khẩu" className="mb-3">
+              <Form.Control
+                type={isShowConfirmPassword ? "text" : "password"}
+                placeholder="Nhập mật khẩu"
+                {...register("confirmPassword", { required: true })}
+              />
+              {isShowConfirmPassword ? (
+                <BsEye
+                  className="position-absolute"
+                  cursor={"pointer"}
+                  onClick={() => setIsShowConfirmPassword(false)}
+                  style={{ top: "19px", right: "10px", fontSize: "25px" }}
+                />
+              ) : (
+                <BsEyeSlash
+                  className="position-absolute"
+                  cursor={"pointer"}
+                  onClick={() => setIsShowConfirmPassword(true)}
+                  style={{ top: "19px", right: "10px", fontSize: "25px" }}
+                />
+              )}
+            </FloatingLabel>
+          </div>
           {errors.confirmPassword && (
-            <span className="text-danger">Vui lòng nhập xác nhận mật khẩu</span>
+            <span className="text-danger">
+              {errors.confirmPassword.message ||
+                "Vui lòng nhập xác nhận lại mật khẩu"}
+            </span>
           )}
         </Form.Group>
         <Form.Group className="mb-3 text-center w-100">
@@ -95,4 +148,4 @@ const Page = () => {
   );
 };
 
-export default Page;
+export default withBase(Page);

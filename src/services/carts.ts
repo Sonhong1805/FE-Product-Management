@@ -31,7 +31,7 @@ const CartsService = {
     cartId: string,
     selectedIds: string[],
     type: "change" | "delete"
-  ): Promise<IResponse<any>> => {
+  ): Promise<IResponse<ICart>> => {
     return axios.put(`/carts/${cartId}/selected`, { selectedIds, type });
   },
 };

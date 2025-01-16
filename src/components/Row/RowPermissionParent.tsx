@@ -23,7 +23,7 @@ const RowPermissionParent = (props: IProps) => {
             onChange={onHandleSelectedAll}
             checked={Object.values(
               permissionAll[value as keyof IPermissionAll]
-            ).every((permission: any) => item.permissions.includes(permission))}
+            ).every((permission) => item.permissions.includes(permission))}
           />
         </td>
       ))}

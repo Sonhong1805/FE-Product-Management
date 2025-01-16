@@ -12,10 +12,6 @@ const RatingsService = {
   }): Promise<IResponse<IRating>> => {
     return axios.post("/ratings/" + pid, { star, content });
   },
-
-  delete: (pid: string, id: string): Promise<IResponse<any>> => {
-    return axios.delete(`/ratings/${pid}/${id}`);
-  },
 };
 
 export default RatingsService;

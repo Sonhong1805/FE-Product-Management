@@ -3,18 +3,16 @@ import { getCookie } from "@/helpers/cookie";
 import priceFormat from "@/helpers/priceFormat";
 import withBase from "@/hocs/withBase";
 import {
-  changeVariant,
   clearSelectedVariant,
   previewVariants,
 } from "@/lib/features/productDetail/productDetailSlice";
 import { fetchProductDetail } from "@/lib/features/productDetail/productDetailThunk";
 import { deleteWishlistItem } from "@/lib/features/user/userSlice";
 import { createCart } from "@/lib/features/user/userThunk";
-import { useAppDispatch, useAppSelector } from "@/lib/hooks";
+import { useAppSelector } from "@/lib/hooks";
 import WishlistService from "@/services/wishlist";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import React, { ChangeEvent, useState } from "react";
 import { Button, Container, Form, InputGroup } from "react-bootstrap";
 import { BsCart3 } from "react-icons/bs";
@@ -94,6 +92,7 @@ const Page = (props: IWithBaseProps) => {
           }
         });
       } else {
+        const stock = productDetail.quantity - productDetail.sold;
         const data = {
           _id,
           cartId,
@@ -106,6 +105,7 @@ const Page = (props: IWithBaseProps) => {
           quantity,
           variant: selectedVariant,
           selected,
+          stock,
         };
         const response = await dispatch(createCart(data)).unwrap();
         if (response.success) {
@@ -266,16 +266,17 @@ const Page = (props: IWithBaseProps) => {
                     )}
                   </div>
                 </div>
-                <div
-                  className={`mb-3  ${
-                    isExistVariant ? "bg-danger-subtle p-3" : ""
-                  }`}>
-                  {selectedVariant && (
-                    <div className="py-2">
-                      <strong>{selectedVariant}</strong>
-                    </div>
-                  )}
-                  <div className="d-flex flex-wrap gap-2">
+                <div className="py-2">
+                  <div className="mb-2">
+                    <span className="me-2">Phân loại: </span>
+                    <span className={`${isExistVariant && "p-3"}`}>
+                      {selectedVariant && <strong>{selectedVariant}</strong>}
+                    </span>
+                  </div>
+                  <div
+                    className={`d-flex flex-wrap gap-2 p-2 ${
+                      isExistVariant && "bg-danger-subtle"
+                    } mb-2`}>
                     {productDetail.variants.length > 0 &&
                       productDetail.variants.map((variant: IVariant) => (
                         <div key={variant._id}>
@@ -294,18 +295,19 @@ const Page = (props: IWithBaseProps) => {
                           </label>
                         </div>
                       ))}
-                    {isExistVariant && (
-                      <div className="text-danger">
-                        Vui lòng chọn Phân loại hàng
-                      </div>
-                    )}
                   </div>
+                  {isExistVariant && (
+                    <div className="text-danger">
+                      Vui lòng chọn Phân loại hàng
+                    </div>
+                  )}
                 </div>
                 <div className="w-50">
                   <InputGroup className="mb-3">
                     <Button
-                      variant="danger"
+                      variant="secondary"
                       id="button-addon1"
+                      disabled={productDetail.quantity === 0}
                       onClick={handleDecreaseQuantity}>
                       <FiMinus />
                     </Button>
@@ -315,12 +317,14 @@ const Page = (props: IWithBaseProps) => {
                       className="text-center"
                       min={1}
                       max={productDetail.quantity}
-                      value={quantity}
+                      value={productDetail.quantity === 0 ? 0 : quantity}
+                      disabled={productDetail.quantity === 0}
                       onChange={handleInputQuantity}
                     />
                     <Button
-                      variant="primary"
+                      variant="secondary"
                       id="button-addon2"
+                      disabled={productDetail.quantity === 0}
                       onClick={handleIncreaseQuantity}>
                       <FiPlus />
                     </Button>
@@ -329,11 +333,13 @@ const Page = (props: IWithBaseProps) => {
                 <div className="d-flex gap-2">
                   <Button
                     variant="outline-danger"
+                    disabled={productDetail.quantity === 0}
                     onClick={() => handleAddToCart(false)}>
                     Thêm vào giỏ hàng
                   </Button>
                   <Button
-                    variant="outline-danger"
+                    variant="danger"
+                    disabled={productDetail.quantity === 0}
                     onClick={() => handleBuyNow(true)}>
                     Mua ngay
                   </Button>

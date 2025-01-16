@@ -1,15 +1,14 @@
 import React from "react";
-import style from "./style.module.scss";
+import "./style.scss";
 import { useAppSelector } from "@/lib/hooks";
-import moment from "moment";
 
 const FooterAdmin = () => {
   const setting = useAppSelector((state) => state.setting.data);
   return (
-    <div className={style.footerAdmin}>
+    <div className="footer-admin">
       <p>
-        @Copyright <strong>( {setting.copyright} )</strong> -{" "}
-        {moment(setting.updatedAt).format("YYYY")}
+        @Copyright <strong>( {setting.copyright} )</strong> - (10/2024 -
+        01/2025)
       </p>
     </div>
   );

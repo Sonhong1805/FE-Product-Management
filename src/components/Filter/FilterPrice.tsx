@@ -49,6 +49,11 @@ const FilterPrice = (props: IWithBaseProps) => {
           defaultValue={[+priceFrom || 0, +priceTo || priceMax]}
           pushable={true}
           className="mb-3 px-2"
+          aria-labelledby="min-price-label max-price-label"
+          aria-valuemin={0}
+          aria-valuemax={priceMax}
+          aria-valuenow={range[0]}
+          aria-valuetext={`Min: ${range[0]}, Max: ${range[1]}`}
         />
         <div className="mb-2">
           Giá :{" "}

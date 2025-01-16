@@ -73,6 +73,7 @@ export const userSlice = createSlice({
       state.userInfo.cart.products = state.userInfo.cart.products.filter(
         (product) => !ids.includes(product._id)
       );
+      state.selectedIds = state.selectedIds.filter((id) => !ids.includes(id));
     },
     selectedIdsChanged: (state, action) => {
       const index = state.selectedIds.findIndex((id) => id === action.payload);

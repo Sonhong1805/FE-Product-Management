@@ -1,7 +1,8 @@
 "use client";
-import Loading from "@/components/Loading/Loading";
+import Loading from "@/components/Loading";
 import Pagination from "@/components/Pagination";
 import priceFormat from "@/helpers/priceFormat";
+import setOrDeleteParam from "@/helpers/setOrDeleteParam";
 import withBase from "@/hocs/withBase";
 import {
   deletedProduct,
@@ -12,13 +13,12 @@ import {
   updateFeature,
 } from "@/lib/features/product/productSlice";
 import { fetchProducts } from "@/lib/features/product/productThunk";
-import { useAppDispatch, useAppSelector } from "@/lib/hooks";
-import { adminProductsFeaturedOptions } from "@/options/featured";
+import { useAppSelector } from "@/lib/hooks";
+import { featuredOptions } from "@/options/feature";
 import { adminProductsFilteredOptions } from "@/options/filter";
 import ProductsService from "@/services/products";
 import moment from "moment";
 import Image from "next/image";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import {
   Badge,
@@ -51,75 +51,52 @@ const Page = (props: IWithBaseProps) => {
   const pagination = useAppSelector((state) => state.products.pagination);
   const queries = useAppSelector((state) => state.products.queries);
 
+  const fetchProductsData = async () => {
+    await dispatch(
+      fetchProducts({
+        page: pagination.page,
+        limit: pagination.limit,
+        ...(queries.keywords && { title: queries.keywords }),
+        ...(queries.priceFrom > 0 && {
+          "discountedPrice[gte]": queries.priceFrom,
+        }),
+        ...(queries.priceTo > 0 && {
+          "discountedPrice[lte]": queries.priceTo,
+        }),
+        ...(queries.categorySlug?.length && {
+          categorySlug: queries.categorySlug,
+        }),
+        ...(queries.filter !== null && queries.filter?.value
+          ? {
+              [queries.filter?.value?.split(",")[0]]:
+                queries.filter?.value?.split(",")[1],
+            }
+          : {}),
+      })
+    );
+  };
+
   useEffect(() => {
     const params = new URLSearchParams(searchParams.toString());
-    const setOrDeleteParam = (
-      key: string,
-      value: string | number | boolean
-    ) => {
-      if (value) {
-        params.set(key, value.toString());
-      } else {
-        params.delete(key);
-      }
-    };
+    setOrDeleteParam(params, "page", pagination.page);
+    setOrDeleteParam(params, "name", queries.keywords);
+    setOrDeleteParam(params, "priceFrom", queries.priceFrom);
+    setOrDeleteParam(params, "priceTo", queries.priceTo);
+    setOrDeleteParam(
+      params,
+      "filter",
+      queries.filter?.value && queries.filter?.value.split(",")[1]
+    );
 
-    setOrDeleteParam("page", pagination.page);
-    setOrDeleteParam("name", queries.keywords);
-    setOrDeleteParam("priceFrom", queries.priceFrom);
-    setOrDeleteParam("priceTo", queries.priceTo);
-
-    const storageParamsKey = localStorage
-      .getItem("productFilterValue")
-      ?.split(",")[0] as string;
-
-    if (queries.filter && queries.filter.value) {
-      const filterLabel = queries.filter.label;
-      const filterValue = queries.filter.value;
-      const [filterKey] = queries.filter.value.split(",");
-      if (filterKey !== storageParamsKey) {
-        params.delete(storageParamsKey);
-        params.set(filterKey, filterLabel);
-        localStorage.setItem("productFilterValue", filterValue);
-        localStorage.setItem("productFilterLabel", filterLabel);
-      } else {
-        params.set(filterKey, filterLabel);
-        localStorage.setItem("productFilterValue", filterValue);
-        localStorage.setItem("productFilterLabel", filterLabel);
-      }
-    } else {
-      params.delete(storageParamsKey);
-      localStorage.removeItem("productFilterValue");
-      localStorage.removeItem("productFilterLabel");
-    }
-
-    (async () => {
-      setLoading(true);
-      await dispatch(
-        fetchProducts({
-          page: pagination.page,
-          limit: pagination.limit,
-          ...(queries.keywords && { title: queries.keywords }),
-          ...(queries.priceFrom > 0 && {
-            "discountedPrice[gte]": queries.priceFrom,
-          }),
-          ...(queries.priceTo > 0 && {
-            "discountedPrice[lte]": queries.priceTo,
-          }),
-          ...(queries.categorySlug?.length && {
-            categorySlug: queries.categorySlug,
-          }),
-          ...(queries.filter !== null
-            ? {
-                [queries.filter?.value?.split(",")[0]]:
-                  queries.filter?.value?.split(",")[1],
-              }
-            : {}),
-        })
-      );
+    setLoading(true);
+    const delayDebounce = setTimeout(async () => {
+      fetchProductsData();
       setLoading(false);
-    })();
-    router.push(pathname + "?" + params.toString());
+      router.push(pathname + "?" + params.toString());
+    }, 1000);
+
+    return () => clearTimeout(delayDebounce);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queries, pagination.page]);
 
   const handleChangeOptionsFeatured = (option: Option | null) => {
@@ -177,47 +154,21 @@ const Page = (props: IWithBaseProps) => {
   const { register, handleSubmit, setValue } = useForm<IProductQueries>({
     defaultValues: {
       keywords: queries.keywords,
-      priceFrom: queries.priceFrom,
-      priceTo: queries.priceTo,
+      priceFrom: queries.priceFrom ? queries.priceFrom : undefined,
+      priceTo: queries.priceFrom ? queries.priceTo : undefined,
     },
   });
   const onSubmit: SubmitHandler<IProductQueries> = (data: IProductQueries) => {
     dispatch(handlePagination({ ...pagination, page: 1 }));
-    const filterKey = localStorage
-      .getItem("productFilterValue")
-      ?.split(",")[0] as string;
-    if (!data.filter || !data.filter.value) {
-      if (filterKey) {
-        dispatch(
-          handleQueries({
-            ...queries,
-            filter: {
-              value: "",
-              label: "",
-            },
-          })
-        );
-      } else {
-        dispatch(
-          handleQueries({
-            ...queries,
-            keywords: data.keywords,
-            priceFrom: isNaN(data.priceFrom) ? 0 : data.priceFrom,
-            priceTo: isNaN(data.priceTo) ? 0 : data.priceTo,
-          })
-        );
-      }
-    } else {
-      dispatch(
-        handleQueries({
-          ...queries,
-          keywords: data.keywords,
-          priceFrom: isNaN(data.priceFrom) ? 0 : data.priceFrom,
-          priceTo: isNaN(data.priceTo) ? 0 : data.priceTo,
-          filter: data.filter,
-        })
-      );
-    }
+    dispatch(
+      handleQueries({
+        ...queries,
+        keywords: data.keywords,
+        priceFrom: isNaN(data.priceFrom) ? 0 : data.priceFrom,
+        priceTo: isNaN(data.priceTo) ? 0 : data.priceTo,
+        filter: data.filter,
+      })
+    );
   };
 
   return (
@@ -297,7 +248,7 @@ const Page = (props: IWithBaseProps) => {
                 isClearable={true}
                 isSearchable={true}
                 name="featured"
-                options={adminProductsFeaturedOptions}
+                options={featuredOptions}
                 onChange={handleChangeOptionsFeatured}
               />
               <Button variant="outline-primary" onClick={handleFeatured}>
@@ -322,9 +273,9 @@ const Page = (props: IWithBaseProps) => {
               />
             </th>
             <th>STT</th>
-            <th className="col-title-product">Tên sản phẩm</th>
+            <th style={{ width: "300px" }}>Tên sản phẩm</th>
             <th>Hình ảnh</th>
-            <th>Danh mục</th>
+            <th style={{ width: "150px" }}>Danh mục</th>
             <th>Giá (VNĐ)</th>
             <th>Số lượng</th>
             <th>Đã bán</th>
@@ -345,7 +296,9 @@ const Page = (props: IWithBaseProps) => {
                   />
                 </td>
                 <td>{(pagination.page - 1) * pagination.limit + index + 1}</td>
-                <td className="col-title-product">{product.title}</td>
+                <td>
+                  <div className="col-title-product">{product.title}</div>
+                </td>
                 <td>
                   <Image
                     src={product.thumbnail + "" || "/image/no-image.png"}
@@ -354,7 +307,10 @@ const Page = (props: IWithBaseProps) => {
                     alt={product.title}
                   />
                 </td>
-                <td>{product.category?.title}</td>
+                <td>
+                  <div className="col-category-product"></div>
+                  {product.category?.title}
+                </td>
                 <td>
                   {product.discount !== 0 && (
                     <div>
@@ -384,7 +340,7 @@ const Page = (props: IWithBaseProps) => {
                         className="center"
                         onClick={() =>
                           router.push(
-                            "/admin/products/create?slug=" + product.slug
+                            "/admin/products/view?slug=" + product.slug
                           )
                         }>
                         <FiEye />
@@ -407,7 +363,10 @@ const Page = (props: IWithBaseProps) => {
                         variant="outline-danger"
                         className="center"
                         onClick={() =>
-                          handleDeleteProduct(product.category._id, product._id)
+                          handleDeleteProduct(
+                            product.category?._id,
+                            product._id
+                          )
                         }>
                         <TfiTrash />
                       </Button>
@@ -442,6 +401,7 @@ const Page = (props: IWithBaseProps) => {
         </div>
         <Pagination
           pagination={pagination}
+          siblingCount={1}
           onHandlePagination={handlePagination}
         />
       </div>

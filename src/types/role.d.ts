@@ -4,12 +4,16 @@ interface IRole {
   description: string;
   permissions: string[];
   status?: boolean;
+  createdAt?: Date;
   updatedAt?: Date;
 }
 
-type IRoleInputs = Omit<IRole, "_id" | "permissions" | "status" | "updatedAt">;
+type IRoleInputs = Omit<
+  IRole,
+  "_id" | "permissions" | "status" | "updatedAt" | "createdAt"
+>;
 
 interface IRoleSearch {
   keywords: string;
-  filter: Option | null;
+  status: Option | null;
 }

@@ -1,7 +1,10 @@
 import axios from "../customs/axios-customize";
 
 const ProductsService = {
-  index: (params: Record<string, any>): Promise<IResponse<IProduct[]>> => {
+  index: (
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    params: Record<string, any>
+  ): Promise<IResponse<IProduct[]>> => {
     return axios.get("/products", { params });
   },
 
@@ -11,9 +14,6 @@ const ProductsService = {
 
   create: (data: FormData): Promise<IResponse<IProduct>> => {
     return axios.post("/products", data);
-  },
-  upload: (formData: FormData): Promise<IResponse<IProduct>> => {
-    return axios.post("/products/upload", formData);
   },
 
   update: (id: string, data: FormData): Promise<IResponse<IProduct>> => {

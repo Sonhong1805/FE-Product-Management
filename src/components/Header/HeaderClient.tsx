@@ -1,41 +1,21 @@
 "use client";
 import { deleteCookie } from "@/helpers/cookie";
-import {
-  handlePagination,
-  handleQueries,
-} from "@/lib/features/product/productSlice";
 import { useAppSelector } from "@/lib/hooks";
 import AuthService from "@/services/auth";
 import Image from "next/image";
 import Link from "next/link";
-import React, { useEffect, useState } from "react";
-import {
-  Button,
-  ButtonGroup,
-  Container,
-  Dropdown,
-  DropdownButton,
-  Form,
-  InputGroup,
-  Nav,
-  NavDropdown,
-} from "react-bootstrap";
-import { BsCart3, BsHeart, BsSearch } from "react-icons/bs";
-import { PiMagnifyingGlassBold } from "react-icons/pi";
+import React from "react";
+import { Button, Container, Nav, NavDropdown } from "react-bootstrap";
+import { BsCart3, BsHeart } from "react-icons/bs";
 import { logout } from "@/lib/features/user/userSlice";
 import withBase from "@/hocs/withBase";
+import SearchKeywords from "@/components/Search";
 
 const HeaderClient = (props: IWithBaseProps) => {
   const { dispatch, router } = props;
   const { name: websiteName, logo } = useAppSelector(
     (state) => state.setting.data
   );
-  const queries = useAppSelector((state) => state.products.queries);
-  const [keywords, setKeywords] = useState<string>(queries.keywords || "");
-
-  useEffect(() => {
-    setKeywords(queries.keywords);
-  }, [queries]);
 
   const isAuthenticated = useAppSelector((state) => state.user.isAuthenticated);
   const userInfo = useAppSelector((state) => state.user.userInfo);
@@ -46,7 +26,6 @@ const HeaderClient = (props: IWithBaseProps) => {
     (total: number, product: TProductInCart) => total + product.quantity,
     0
   );
-  const pagination = useAppSelector((state) => state.products.pagination);
 
   const handleLogout = async () => {
     const response = await AuthService.logout();
@@ -57,10 +36,6 @@ const HeaderClient = (props: IWithBaseProps) => {
       router.push("/login");
     }
   };
-  const handleFilterKeywords = () => {
-    dispatch(handlePagination({ ...pagination, page: 1 }));
-    dispatch(handleQueries({ keywords }));
-  };
 
   return (
     <div>
@@ -68,10 +43,11 @@ const HeaderClient = (props: IWithBaseProps) => {
         <Container>
           <Nav className="justify-content-between py-2">
             <Nav.Item>
+              <span>Quản lý sản phẩm </span>
               <Link
                 href={"/admin/dashboard"}
                 className="link-body-emphasis link-underline-opacity-0 text-danger">
-                Quản trị viên
+                Tại đây
               </Link>
             </Nav.Item>
             {!isAuthenticated ? (
@@ -125,41 +101,29 @@ const HeaderClient = (props: IWithBaseProps) => {
         <Container>
           <div className="d-flex gap-5 justify-content-between align-items-center">
             <Link
+              rel="preload"
               href={"/"}
               className="d-inline-flex align-items-center link-body-emphasis link-underline-opacity-0">
               <Image
                 src={logo + "" || "/image/logo.png"}
                 width={100}
                 height={100}
-                priority={true}
+                priority
                 style={{ objectFit: "contain" }}
                 alt="logo"
               />
               <span className="fw-bolder" style={{ fontSize: "20px" }}>
                 {(websiteName || "Product Management")
                   .split(" ")
-                  .map((line, index) => (
-                    <React.Fragment key={index}>
+                  .map((line: string, index: number) => (
+                    <em key={index}>
                       {line}
                       <br />
-                    </React.Fragment>
+                    </em>
                   ))}
               </span>
             </Link>
-            <InputGroup className="pe-5 w-50">
-              <Form.Control
-                placeholder="Tìm kiếm sản phẩm tại đây"
-                aria-label="Tìm kiếm sản phẩm tại đây"
-                aria-describedby="basic-addon2"
-                value={keywords}
-                onChange={(e) => setKeywords(e.target.value)}
-              />
-              <Button
-                className="bg-danger border border-danger"
-                onClick={handleFilterKeywords}>
-                <BsSearch size={20} className="text-light" />
-              </Button>
-            </InputGroup>
+            <SearchKeywords />
             <div className="d-flex gap-5 align-items-center">
               <Button
                 type="button"

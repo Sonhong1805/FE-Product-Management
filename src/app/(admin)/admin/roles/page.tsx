@@ -15,16 +15,18 @@ import Modal from "react-modal";
 import { IoMdClose } from "react-icons/io";
 import { SubmitHandler, useForm } from "react-hook-form";
 import Swal from "sweetalert2";
-import { adminRolesFeaturedOptions } from "@/options/featured";
+import { featuredOptions } from "@/options/feature";
 import { TiEdit } from "react-icons/ti";
 import { TfiTrash } from "react-icons/tfi";
 import RolesService from "@/services/roles";
-import { adminRolesFilteredOptions } from "@/options/filter";
 import moment from "moment";
 import withBase from "@/hocs/withBase";
 import { useAppSelector } from "@/lib/hooks";
+import { statusOptions } from "@/options/status";
+import Loading from "@/components/Loading";
+import setOrDeleteParam from "@/helpers/setOrDeleteParam";
 
-const Page = (props: any) => {
+const Page = (props: IWithBaseProps) => {
   const userPermissions = useAppSelector(
     (state) => state.user.userInfo.role.permissions
   );
@@ -34,24 +36,29 @@ const Page = (props: any) => {
   const [selectedId, setSelectedId] = useState<string>("");
   const [selectedIds, setSelectedIds] = useState<(string | number)[]>([]);
   const [selectedFeatured, setSelectedFeatured] = useState<Option | null>(null);
-  const [selectedFilterd, setSelectedFilterd] = useState<Option | null>(null);
+  const [selectedStatus, setSelectedStatus] = useState<Option | null>(null);
   const keywordsRef = useRef<HTMLInputElement | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
 
-  const [search, setSearch] = useState<IRoleSearch>({
-    keywords: "",
-    filter: {
-      label: "",
-      value: "",
+  const findStatus = statusOptions.find((option) =>
+    option.value.includes(searchParams.get("status") + "")
+  );
+
+  const [queries, setQueries] = useState<IRoleSearch>({
+    keywords: searchParams.get("name") || "",
+    status: {
+      label: searchParams.get("status") && findStatus ? findStatus?.label : "",
+      value: searchParams.get("status") && findStatus ? findStatus?.value : "",
     },
   });
 
-  const fetchRoles = async () => {
+  const fetchRolesData = async () => {
     const response = await RolesService.index({
-      ...(search.keywords && { title: search.keywords }),
-      ...(search.filter !== null
+      ...(queries.keywords && { title: queries.keywords }),
+      ...(queries.status !== null && queries.status?.value
         ? {
-            [search.filter?.value?.split(",")[0]]:
-              search.filter?.value?.split(",")[1],
+            [queries.status?.value?.split(",")[0]]:
+              queries.status?.value?.split(",")[1],
           }
         : {}),
     });
@@ -59,26 +66,25 @@ const Page = (props: any) => {
       setRoles(response.data || []);
     }
   };
+
   useEffect(() => {
     const params = new URLSearchParams(searchParams.toString());
+    setOrDeleteParam(params, "name", queries.keywords);
+    setOrDeleteParam(
+      params,
+      "status",
+      queries.status?.value && queries.status?.value.split(",")[1]
+    );
 
-    if (search.keywords) {
-      params.set("name", search.keywords);
-    } else {
-      params.delete("name");
-    }
-
-    if (search.filter && search.filter.value) {
-      params.set("status", search.filter.label);
-      localStorage.setItem("statusValue", search.filter.value);
-    } else {
-      params.delete("status");
-      localStorage.removeItem("statusValue");
-    }
-
-    router.push(pathname + "?" + params.toString());
-    fetchRoles();
-  }, [search]);
+    setLoading(true);
+    const delayDebounce = setTimeout(async () => {
+      fetchRolesData();
+      setLoading(false);
+      router.push(pathname + "?" + params.toString());
+    }, 1000);
+    return () => clearTimeout(delayDebounce);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queries]);
 
   const {
     register,
@@ -199,7 +205,7 @@ const Page = (props: any) => {
         feature: selectedFeatured.value,
       });
       if (response?.success) {
-        fetchRoles();
+        fetchRolesData();
         Swal.fire({
           icon: response?.success ? "success" : "error",
           title: response?.message,
@@ -229,15 +235,16 @@ const Page = (props: any) => {
   };
 
   const handleSearch = () => {
-    setSearch({
-      ...search,
+    setQueries({
+      ...queries,
       keywords: keywordsRef.current?.value as string,
-      filter: selectedFilterd,
+      status: selectedStatus,
     });
   };
 
   return (
     <Container>
+      {loading && <Loading />}
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2>Quản lý vai trò</h2>
         {userPermissions.includes("roles_create") && (
@@ -261,16 +268,20 @@ const Page = (props: any) => {
               type="text"
               placeholder="Nhập tên vai trò"
               name="title"
+              defaultValue={queries.keywords || ""}
               ref={keywordsRef}
             />
             <Select
-              className="basic-single flex-fill me-2"
+              className="basic-single me-2"
               classNamePrefix="select"
-              placeholder="-- Chọn bộ lọc --"
-              name="filter"
+              placeholder="-- Chọn trạng thái --"
+              name="status"
               isClearable={true}
-              options={adminRolesFilteredOptions}
-              onChange={(option) => setSelectedFilterd(option)}
+              defaultValue={
+                queries.status && queries.status.value ? queries.status : null
+              }
+              options={statusOptions}
+              onChange={(option) => setSelectedStatus(option)}
             />
             <Button variant="outline-success" onClick={handleSearch}>
               Tìm kiếm
@@ -289,7 +300,7 @@ const Page = (props: any) => {
               isClearable={true}
               isSearchable={true}
               name="featured"
-              options={adminRolesFeaturedOptions}
+              options={featuredOptions}
               onChange={handleChangeOptionsFeatured}
             />
             <Button variant="outline-primary" onClick={handleFeatured}>
