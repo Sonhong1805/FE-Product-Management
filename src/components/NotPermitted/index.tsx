@@ -18,7 +18,7 @@ const NotPermitted = () => {
           <li>Email: admin@gmail.com</li>
           <li>Password: admin</li>
         </ul>
-        <Link href={"/login?rollback=/admin/dashboard"} className="text-danger">
+        <Link href={"/login"} className="text-danger">
           Đăng nhập ngay
         </Link>
       </div>
